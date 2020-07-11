@@ -1,0 +1,26 @@
+[package]
+name = "apdu-dispatch"
+version = "0.0.1"
+authors = ["Conor Patrick <conor@solokeys.com>", "Nicolas Stalder <n@stalder.io>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ufmt = "0.1"
+heapless = { version = "0.5.5" }
+
+# Components
+iso7816 = { path = "../iso7816" }
+logging = {path = "../logging"}
+interchange = {path = "../interchange"}
+
+usbd-ccid = {path = "../usbd-ccid"}
+iso14443 = {path = "../iso14443"}
+
+[features]
+default = []
+std = ["logging/std"]
+
+[patch.crates-io]
+heapless = { git = "https://github.com/nicolas-solokeys/heapless", branch = "bytebuf" }
