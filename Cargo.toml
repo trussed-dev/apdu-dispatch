@@ -3,6 +3,7 @@ name = "apdu-dispatch"
 version = "0.0.1"
 authors = ["Conor Patrick <conor@solokeys.com>", "Nicolas Stalder <n@stalder.io>"]
 edition = "2018"
+license = "Apache-2.0 OR MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,7 +13,7 @@ heapless = "0.6"
 heapless-bytes = "0.2.0"
 
 # Components
-iso7816 = { path = "../iso7816" }
+iso7816 = { git = "https://github.com/ycrypto/iso7816", branch = "main" }
 interchange = "0.2.0"
 
 # Testing
