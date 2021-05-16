@@ -342,7 +342,7 @@ impl ApduDispatch
     }
 
     #[inline(never)]
-    fn handle_app_select<'a>(&mut self, apps: &'a mut [&'a mut dyn App<CommandSize, ResponseSize>], aid: Aid) {
+    fn handle_app_select<'a>(&mut self, apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>], aid: Aid) {
         // three cases:
         // - currently selected app has different AID -> deselect it, to give it
         //   the chance to clear sensitive state
@@ -389,7 +389,7 @@ impl ApduDispatch
 
 
     #[inline(never)]
-    fn handle_app_command<'a>(&mut self, apps: &'a mut [&'a mut dyn App<CommandSize, ResponseSize>]) {
+    fn handle_app_command<'a>(&mut self, apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>]) {
         // if there is a selected app, send it the command
         let mut response = response::Data::new();
         if let Some(app) = Self::find_app(self.current_aid.as_ref(), apps) {
@@ -410,7 +410,7 @@ impl ApduDispatch
 
     pub fn poll<'a>(
         &mut self,
-        apps: &'a mut [&'a mut dyn App<CommandSize, ResponseSize>],
+        apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>],
     ) -> Option<Interface> {
 
         // Only take on one transaction at a time.
@@ -424,7 +424,7 @@ impl ApduDispatch
             // SELECT case
             RequestType::Select(aid) => {
                 info!("Select");
-                self.handle_app_select(apps,aid);
+                self.handle_app_select(apps, aid);
             }
 
             RequestType::GetResponse => {
