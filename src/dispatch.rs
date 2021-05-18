@@ -454,7 +454,7 @@ impl ApduDispatch
 
     #[inline(never)]
     fn respond(&mut self, message: &interchanges::Data){
-        debug!("<<< {}", hex_str!(message.as_slice(), sep:""));
+        debug!("<< {}", hex_str!(message.as_slice(), sep:""));
         match self.current_interface {
             Interface::Contactless =>
                 self.contactless.respond(&message).expect("cant respond"),
