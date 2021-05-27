@@ -212,7 +212,7 @@ impl ApduDispatch
                     FromSliceError::TooShort => { info!("TooShort"); },
                     FromSliceError::InvalidClass => { info!("InvalidClass"); },
                     FromSliceError::InvalidFirstBodyByteForExtended => { info!("InvalidFirstBodyByteForExtended"); },
-                    FromSliceError::CanThisReallyOccur => { info!("CanThisReallyOccur"); },
+                    FromSliceError::InvalidSliceLength => { info!("InvalidSliceLength"); },
                 }
                 Err(Status::UnspecifiedCheckingError)
             }
