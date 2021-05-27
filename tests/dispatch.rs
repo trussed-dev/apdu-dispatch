@@ -9,7 +9,7 @@ use apdu_dispatch::{
     interchanges,
 };
 use apdu_dispatch::dispatch;
-use apdu_dispatch::{Command,Response};
+use apdu_dispatch::{Command};
 use iso7816::{
     Status,
 };
@@ -63,7 +63,7 @@ impl Aid for TestApp1 {
 }
 
 // This app echos to Ins code 0x10
-impl App for TestApp1 {
+impl App<command::Size, response::Size> for TestApp1 {
 
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         Ok(Default::default())
@@ -87,7 +87,7 @@ impl App for TestApp1 {
             }
             // For measuring the stack burden of dispatch
             0x15 => {
-                let mut buf = Bytes::new();
+                let buf = Bytes::new();
                 let addr = (&buf as *const response::Data ) as u32;
                 reply.extend_from_slice(&addr.to_be_bytes()).unwrap();
                 Ok(())
@@ -112,7 +112,7 @@ impl Aid for TestApp2 {
 }
 
 // This app echos to Ins code 0x20
-impl App for TestApp2 {
+impl App<command::Size, response::Size> for TestApp2 {
 
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         Ok(Default::default())
@@ -164,7 +164,7 @@ impl Aid for PanicApp{
 }
 
 // This app should never get selected
-impl App for PanicApp {
+impl App<command::Size, response::Size> for PanicApp {
 
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         panic!("Dont call the panic app");
