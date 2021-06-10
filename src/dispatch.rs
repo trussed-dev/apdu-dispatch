@@ -11,8 +11,8 @@
 use core::convert::TryInto;
 use crate::App;
 use crate::{Command, response, interchanges};
-use crate::command::Size as CommandSize;
-use crate::response::Size as ResponseSize;
+use crate::command::SIZE as CommandSize;
+use crate::response::SIZE as ResponseSize;
 
 use iso7816::{
     Aid,
@@ -45,7 +45,7 @@ struct ApduBuffer {
 }
 
 impl ApduBuffer {
-    fn request(&mut self, command: &iso7816::Command<impl heapless_bytes::ArrayLength<u8>>) {
+    fn request<const S: usize>(&mut self, command: &iso7816::Command<S>) {
         match &mut self.raw {
             RawApduBuffer::Request(buffered) => {
                 buffered.extend_from_command(command).ok();
@@ -81,10 +81,10 @@ pub struct ApduDispatch {
 
 impl ApduDispatch
 {
-    fn apdu_type(apdu: &iso7816::Command<impl heapless_bytes::ArrayLength<u8>>) -> RequestType {
+    fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>) -> RequestType {
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
             // RequestType::Select(Aid::try_from_slice(apdu.data()).unwrap())
-            RequestType::Select(Aid::new(apdu.data(), apdu.data().len()))
+            RequestType::Select(Aid::new(apdu.data()))
         } else if apdu.instruction() == Instruction::GetResponse {
             RequestType::GetResponse
         } else {
@@ -148,9 +148,9 @@ impl ApduDispatch
 
 
     #[inline(never)]
-    fn buffer_chained_apdu_if_needed(&mut self, command: iso7816::Command<impl heapless_bytes::ArrayLength<u8>>, inferface: Interface) -> RequestType {
+    fn buffer_chained_apdu_if_needed<const S: usize>(&mut self, command: iso7816::Command<S>, interface: Interface) -> RequestType {
 
-        self.current_interface = inferface;
+        self.current_interface = interface;
         // iso 7816-4 5.1.1
         // check Apdu level chaining and buffer if necessary.
         if !command.class().chain().not_the_last() {
@@ -182,7 +182,7 @@ impl ApduDispatch
                 apdu_type
             }
         } else {
-            match inferface {
+            match interface {
                 // acknowledge
                 Interface::Contact => {
                     self.contact.respond(&Status::Success.try_into().unwrap())
@@ -202,8 +202,8 @@ impl ApduDispatch
         }
     }
 
-    fn parse_apdu<SIZE: heapless_bytes::ArrayLength<u8>>(message: &interchanges::Data)
-    -> Result<iso7816::Command<SIZE>> {
+    fn parse_apdu<const S: usize>(message: &interchanges::Data)
+    -> Result<iso7816::Command<S>> {
 
         debug!(">> {}", hex_str!(message.as_slice(), sep:""));
         match iso7816::Command::try_from(message) {
@@ -214,6 +214,7 @@ impl ApduDispatch
                 info!("apdu bad");
                 match _error {
                     FromSliceError::TooShort => { info!("TooShort"); },
+                    FromSliceError::TooLong => { info!("TooLong"); },
                     FromSliceError::InvalidClass => { info!("InvalidClass"); },
                     FromSliceError::InvalidFirstBodyByteForExtended => { info!("InvalidFirstBodyByteForExtended"); },
                     FromSliceError::InvalidSliceLength => { info!("InvalidSliceLength"); },
@@ -238,7 +239,7 @@ impl ApduDispatch
             };
 
             // Parse the message as an APDU.
-            match Self::parse_apdu::<interchanges::Size>(&message) {
+            match Self::parse_apdu::<{interchanges::SIZE}>(&message) {
                 Ok(command) => {
                     // The Apdu may be standalone or part of a chain.
                     self.buffer_chained_apdu_if_needed(command, interface)
@@ -291,7 +292,7 @@ impl ApduDispatch
 
                     let to_send = &res[..boundary];
                     let remaining = &res[boundary..];
-                    let mut message = interchanges::Data::try_from_slice(to_send).unwrap();
+                    let mut message = interchanges::Data::from_slice(to_send).unwrap();
                     let return_code = if remaining.len() > 255 {
                         // XX = 00 indicates more than 255 bytes of data
                         0x6100u16
@@ -310,7 +311,7 @@ impl ApduDispatch
                     } else {
                         info!("Still {} bytes in response buffer", remaining.len());
                         (
-                            RawApduBuffer::Response(response::Data::try_from_slice(remaining).unwrap()),
+                            RawApduBuffer::Response(response::Data::from_slice(remaining).unwrap()),
                             message
                         )
                     }
@@ -318,7 +319,7 @@ impl ApduDispatch
                 } else {
                     // Add success code
                     res.extend_from_slice(&[0x90,00]).ok();
-                    (RawApduBuffer::None, interchanges::Data::try_from_slice(&res.as_slice()).unwrap())
+                    (RawApduBuffer::None, interchanges::Data::from_slice(&res.as_slice()).unwrap())
                 }
 
             }

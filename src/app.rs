@@ -1,10 +1,8 @@
-pub use iso7816::{Command, Data, Status};
+pub use iso7816::{Command, Data, Interface, Status};
 pub type Result = iso7816::Result<()>;
 
-pub use crate::{ArrayLength, dispatch::Interface};
-
 /// An App can receive and respond APDUs at behest of the ApduDispatch.
-pub trait App<C: ArrayLength<u8>, R: ArrayLength<u8>>: iso7816::App {
+pub trait App<const C: usize, const R: usize>: iso7816::App {
     /// Given parsed APDU for select command.
     /// Write response data back to buf, and return length of payload.  Return APDU Error code on error.
     /// Alternatively, the app can defer the response until later by returning it in `poll()`.
