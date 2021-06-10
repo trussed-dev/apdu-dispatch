@@ -83,7 +83,8 @@ impl ApduDispatch
 {
     fn apdu_type(apdu: &iso7816::Command<impl heapless_bytes::ArrayLength<u8>>) -> RequestType {
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
-            RequestType::Select(Aid::try_from_slice(apdu.data()).unwrap())
+            // RequestType::Select(Aid::try_from_slice(apdu.data()).unwrap())
+            RequestType::Select(Aid::new(apdu.data(), apdu.data().len()))
         } else if apdu.instruction() == Instruction::GetResponse {
             RequestType::GetResponse
         } else {
@@ -118,11 +119,14 @@ impl ApduDispatch
         //     Some(aid) => apps.iter_mut().find(|app| aid.starts_with(app.rid())),
         //     None => None,
         // }
-        aid.and_then(move |aid|
-            apps.iter_mut().find(|app|
-                aid.starts_with(app.aid())
-            )
-        )
+        aid.and_then(move |aid| {
+            debug_now!("matching {:?}", aid);
+            apps.iter_mut().find(|app| {
+                // aid.starts_with(app.aid().truncated())
+                debug_now!("...against {:?}", app.aid());
+                app.aid().matches(aid)
+            } )
+        })
     }
 
     fn busy(&self) -> bool {
@@ -354,8 +358,8 @@ impl ApduDispatch
         // not necessarily the case for other apps
 
         // if there is a selected app with a different AID, deselect it
-        if let Some(current_aid) = self.current_aid.as_ref() {
-            if *current_aid != *aid {
+        if let Some(current_aid) = self.current_aid {
+            if current_aid != aid {
                 let app = Self::find_app(self.current_aid.as_ref(), apps).unwrap();
                 // for now all apps will be happy with this.
                 app.deselect();
@@ -381,7 +385,7 @@ impl ApduDispatch
 
 
         } else {
-            info!("could not find app by aid: {}", hex_str!(&aid));
+            info!("could not find app by aid: {}", hex_str!(&aid.as_bytes()));
             self.reply_error(Status::NotFound);
         };
 
