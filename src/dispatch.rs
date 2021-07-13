@@ -82,6 +82,7 @@ pub struct ApduDispatch {
 impl ApduDispatch
 {
     fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>) -> RequestType {
+        info!("instruction: {:?} {}", apdu.instruction(), apdu.p1);
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
             // RequestType::Select(Aid::try_from_slice(apdu.data()).unwrap())
             RequestType::Select(Aid::new(apdu.data()))
@@ -120,10 +121,10 @@ impl ApduDispatch
         //     None => None,
         // }
         aid.and_then(move |aid| {
-            debug_now!("matching {:?}", aid);
+            debug!("matching {:?}", aid);
             apps.iter_mut().find(|app| {
                 // aid.starts_with(app.aid().truncated())
-                debug_now!("...against {:?}", app.aid());
+                debug!("...against {:?}", app.aid());
                 app.aid().matches(aid)
             } )
         })
@@ -194,8 +195,10 @@ impl ApduDispatch
                 }
             }
 
-            info!("chaining {} bytes", command.data().len());
-            self.buffer.request(&command);
+            if command.data().len() > 0 {
+                info!("chaining {} bytes", command.data().len());
+                self.buffer.request(&command);
+            }
 
             // Nothing for the application to consume yet.
             RequestType::None
