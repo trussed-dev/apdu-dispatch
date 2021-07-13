@@ -1,11 +1,9 @@
 use apdu_dispatch::app::{
     App,
-    Aid,
     Result as AppResult
 };
 use apdu_dispatch::{
     response,
-    command,
     interchanges,
 };
 use apdu_dispatch::dispatch;
@@ -14,8 +12,6 @@ use iso7816::{
     Status,
 };
 use interchange::Interchange;
-
-use heapless_bytes::Bytes;
 
 #[macro_use]
 extern crate serial_test;
@@ -52,18 +48,15 @@ fn dump_hex(data: &[u8]){
 
 pub struct TestApp1 {}
 
-impl Aid for TestApp1 {
-    fn aid(&self) -> &'static [u8] {
-        &[ 0x0Au8, 1, 0, 0, 1]
-    }
-
-    fn right_truncated_length(&self) -> usize {
-        5
+impl iso7816::App for TestApp1
+{
+    fn aid(&self) -> iso7816::Aid {
+        iso7816::Aid::new(&[ 0x0Au8, 1, 0, 0, 1])
     }
 }
 
 // This app echos to Ins code 0x10
-impl App<command::Size, response::Size> for TestApp1 {
+impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for TestApp1 {
 
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         Ok(Default::default())
@@ -87,7 +80,7 @@ impl App<command::Size, response::Size> for TestApp1 {
             }
             // For measuring the stack burden of dispatch
             0x15 => {
-                let buf = Bytes::new();
+                let buf = heapless::Vec::new();
                 let addr = (&buf as *const response::Data ) as u32;
                 reply.extend_from_slice(&addr.to_be_bytes()).unwrap();
                 Ok(())
@@ -101,18 +94,15 @@ impl App<command::Size, response::Size> for TestApp1 {
 
 pub struct TestApp2 {}
 
-impl Aid for TestApp2 {
-    fn aid(&self) -> &'static [u8] {
-        &[ 0x0Au8, 1, 0, 0, 2]
-    }
-
-    fn right_truncated_length(&self) -> usize {
-        5
+impl iso7816::App for TestApp2
+{
+    fn aid(&self) -> iso7816::Aid {
+        iso7816::Aid::new(&[ 0x0Au8, 1, 0, 0, 2])
     }
 }
 
 // This app echos to Ins code 0x20
-impl App<command::Size, response::Size> for TestApp2 {
+impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for TestApp2 {
 
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         Ok(Default::default())
@@ -153,18 +143,15 @@ impl App<command::Size, response::Size> for TestApp2 {
 
 pub struct PanicApp {}
 
-impl Aid for PanicApp{
-    fn aid(&self) -> &'static [u8] {
-        &[ 0x0Au8, 1, 0, 0, 3]
-    }
-
-    fn right_truncated_length(&self) -> usize {
-        5
+impl iso7816::App for PanicApp
+{
+    fn aid(&self) -> iso7816::Aid {
+        iso7816::Aid::new(&[ 0x0Au8, 1, 0, 0, 3])
     }
 }
 
-// This app should never get selected
-impl App<command::Size, response::Size> for PanicApp {
+// This app echos to Ins code 0x20
+impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for PanicApp {
 
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         panic!("Dont call the panic app");
@@ -218,7 +205,7 @@ fn run_apdus(
         print!("<< "); 
         dump_hex(&raw_req);
 
-        contact_requester.request(&interchanges::Data::try_from_slice(&raw_req).unwrap())
+        contact_requester.request(&interchanges::Data::from_slice(&raw_req).unwrap())
             .expect("could not deposit command");
 
         apdu_dispatch.poll(&mut[&mut app0, &mut app1, &mut app2, &mut app3, &mut app4]);
@@ -919,6 +906,23 @@ fn chaining_with_unknown_class_range(){
     )
 }
 
+#[test]
+#[serial]
+fn send_select_preceded_with_zero_chained_data(){
+    // Sending a select after chaining 0 bytes should result in successful select operation
+    run_apdus(
+        &[
+            // Chaining zero data
+            &[0x90, 0x60, 0x00, 0x00, 0x00],
+            &[0x90, 0x00u8],
+
+            // Select 1
+            &[0x00u8, 0xA4, 0x04, 0x00, 0x05, 0x0A, 0x01, 0x00, 0x00, 0x01],
+            &[0x90, 0x00u8],
+        ]
+    )
+}
+
 
 
 #[test]
@@ -938,7 +942,7 @@ fn check_stack_burden(){
 
     let mut app1 = TestApp1{};
 
-    contact_requester.request(&interchanges::Data::try_from_slice(
+    contact_requester.request(&interchanges::Data::from_slice(
         &[0x00u8, 0xA4, 0x04, 0x00, 0x05, 0x0A, 0x01, 0x00, 0x00, 0x01],
     ).unwrap()).expect("could not deposit command");
 
@@ -949,7 +953,7 @@ fn check_stack_burden(){
     print!(">> "); 
     dump_hex(&response);
 
-    contact_requester.request(&interchanges::Data::try_from_slice(
+    contact_requester.request(&interchanges::Data::from_slice(
         &[0x00u8, 0x15, 0x00, 0x00],
     ).unwrap()).expect("could not deposit command");
 
