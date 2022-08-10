@@ -13,7 +13,7 @@ repository = "https://github.com/solokeys/apdu-dispatch"
 delog = "0.1.4"
 heapless = "0.7"
 interchange = "0.2.0"
-iso7816 = "0.1.0"
+iso7816 = { git = "https://github.com/Nitrokey/iso7816.git", branch = "fix-le-parsing" }
 
 [dev-dependencies]
 # Testing
