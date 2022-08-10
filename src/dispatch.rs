@@ -22,6 +22,14 @@ use iso7816::{
     command::FromSliceError,
 };
 
+/// Maximum length of a data field of a response that can fit in an interchange message after
+/// concatenation of SW1SW2
+const MAX_INTERCHANGE_DATA: usize = if interchanges::SIZE < ResponseSize {
+    interchanges::SIZE
+} else {
+    ResponseSize
+} - 2;
+
 pub use iso7816::Interface;
 
 pub enum RequestType {
@@ -270,7 +278,7 @@ impl ApduDispatch
         // If the reader is using chaining, we will simply
         // reply 61XX, and put the response in a buffer.
         // It is up to the reader to then send GetResponse
-        // requests, to which we will return up to 256 bytes at a time.
+        // requests, to which we will return up to `Le` bytes at a time.
         let (new_state, response) = match &mut self.buffer.raw {
             RawApduBuffer::Request(_) | RawApduBuffer::None => {
                 info!("Unexpected GetResponse request.");
@@ -281,10 +289,10 @@ impl ApduDispatch
             }
             RawApduBuffer::Response(res) => {
 
-                if self.was_request_chained || res.len() > interchanges::SIZE {
+                if self.was_request_chained || res.len() > MAX_INTERCHANGE_DATA {
 
                     // Do not send more than the expected bytes
-                    let boundary = core::cmp::min(self.response_len_expected, res.len());
+                    let boundary = self.response_len_expected.min(res.len()).min(MAX_INTERCHANGE_DATA);
 
                     let to_send = &res[..boundary];
                     let remaining = &res[boundary..];
@@ -298,7 +306,7 @@ impl ApduDispatch
                         // Last chunk has success code
                         0x9000
                     };
-                    message.extend_from_slice(&return_code.to_be_bytes()).ok();
+                    message.extend_from_slice(&return_code.to_be_bytes()).expect("Failed add to status bytes");
                     if return_code == 0x9000 {
                         (
                             RawApduBuffer::None,
@@ -314,8 +322,8 @@ impl ApduDispatch
 
                 } else {
                     // Add success code
-                    res.extend_from_slice(&[0x90,00]).ok();
-                    (RawApduBuffer::None, interchanges::Data::from_slice(res.as_slice()).unwrap())
+                    res.extend_from_slice(&[0x90,00]).expect("Failed to add the status bytes");
+                    (RawApduBuffer::None, interchanges::Data::from_slice(&res.as_slice()).unwrap())
                 }
 
             }

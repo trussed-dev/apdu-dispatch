@@ -86,6 +86,24 @@ impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for 
                 reply.extend_from_slice(&addr.to_be_bytes()).unwrap();
                 Ok(())
             }
+
+            // Testing a response larger than the interchange's size
+            0x21 => {
+                reply.extend_from_slice(&[10; interchanges::SIZE+1]).unwrap();
+                Ok(())
+            }
+            0x22 => {
+                reply.extend_from_slice(&[10; interchanges::SIZE-2]).unwrap();
+                Ok(())
+            }
+            0x23 => {
+                reply.extend_from_slice(&[10; interchanges::SIZE-1]).unwrap();
+                Ok(())
+            }
+            0x24 => {
+                reply.extend_from_slice(&[10; interchanges::SIZE]).unwrap();
+                Ok(())
+            }
             _ => 
                 Err(Status::InstructionNotSupportedOrInvalid)
         }
@@ -1025,6 +1043,51 @@ fn send_select_preceded_with_zero_chained_data(){
             // Select 1
             &hex!("00A40400 05 0A01000001"),
             &hex!("9000"),
+        ]
+    )
+}
+
+#[test]
+#[serial]
+fn response_larger_than_interchange(){
+    // Sending a select after chaining 0 bytes should result in successful select operation
+    let mut response1 = vec![0x0A; interchanges::SIZE-2];
+    response1.extend_from_slice(&hex!("6103"));
+    let mut response2 = vec![0x0A; interchanges::SIZE-2];
+    response2.extend_from_slice(&hex!("9000"));
+    let mut response3 = vec![0x0A; interchanges::SIZE-2];
+    response3.extend_from_slice(&hex!("6101"));
+    let mut response4 = vec![0x0A; interchanges::SIZE-2];
+    response4.extend_from_slice(&hex!("6102"));
+    run_apdus(
+        &[
+            // Select 1
+            &hex!("00A40400 05 0A01000001"),
+            &hex!("9000"),
+
+            &hex!("00210000  00ffff"),
+            &response1,
+            
+            // Get Response
+            &hex!("00C00000 00"),
+            &hex!("0A0A0A 9000"),
+
+            &hex!("00220000  00ffff"),
+            &response2,
+
+            &hex!("00230000  00ffff"),
+            &response3,
+            
+            // Get Response
+            &hex!("00C00000 00"),
+            &hex!("0A 9000"),
+
+            &hex!("00240000  00ffff"),
+            &response4,
+
+            // Get Response
+            &hex!("00C00000 00"),
+            &hex!("0A0A 9000"),
         ]
     )
 }
