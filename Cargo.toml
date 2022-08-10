@@ -18,6 +18,7 @@ iso7816 = "0.1.0"
 [dev-dependencies]
 # Testing
 serial_test = "0.6"
+hex-literal = "0.3.4"
 
 [features]
 default = []
