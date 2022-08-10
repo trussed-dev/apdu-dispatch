@@ -99,8 +99,8 @@ impl ApduDispatch
     ) -> ApduDispatch {
         ApduDispatch {
             current_aid: None,
-            contact: contact,
-            contactless: contactless,
+            contact,
+            contactless,
             current_interface: Interface::Contact,
             was_request_chained: false,
             buffer: ApduBuffer {
@@ -134,16 +134,8 @@ impl ApduDispatch
         // the correctness of this relies on the properties of interchange - requester can only
         // send request in the idle state.
         use interchange::State::*;
-        let contactless_busy = match self.contactless.state() {
-            Idle | Requested => false,
-            _ => true,
-
-        };
-        let contact_busy = match self.contact.state() {
-            Idle | Requested => false,
-            _ => true,
-
-        };
+        let contact_busy = !matches!(self.contact.state(), Idle | Requested);
+        let contactless_busy = !matches!(self.contactless.state(), Idle | Requested);
         contactless_busy || contact_busy
     }
 
@@ -156,10 +148,7 @@ impl ApduDispatch
         // check Apdu level chaining and buffer if necessary.
         if !command.class().chain().not_the_last() {
 
-            let is_chaining = match &self.buffer.raw {
-                RawApduBuffer::Request(_) => true,
-                _ => false,
-            };
+            let is_chaining = matches!(self.buffer.raw, RawApduBuffer::Request(_));
 
             if is_chaining {
                 self.buffer.request(&command);
@@ -195,7 +184,7 @@ impl ApduDispatch
                 }
             }
 
-            if command.data().len() > 0 {
+            if !command.data().is_empty() {
                 info!("chaining {} bytes", command.data().len());
                 self.buffer.request(&command);
             }
@@ -299,8 +288,8 @@ impl ApduDispatch
                     let return_code = if remaining.len() > 255 {
                         // XX = 00 indicates more than 255 bytes of data
                         0x6100u16
-                    } else if remaining.len() > 0 {
-                        0x6100u16 + (remaining.len() as u16)
+                    } else if !remaining.is_empty() {
+                        0x6100 + (remaining.len() as u16)
                     } else {
                         // Last chunk has success code
                         0x9000
@@ -322,7 +311,7 @@ impl ApduDispatch
                 } else {
                     // Add success code
                     res.extend_from_slice(&[0x90,00]).ok();
-                    (RawApduBuffer::None, interchanges::Data::from_slice(&res.as_slice()).unwrap())
+                    (RawApduBuffer::None, interchanges::Data::from_slice(res.as_slice()).unwrap())
                 }
 
             }
@@ -465,9 +454,9 @@ impl ApduDispatch
         debug!("<< {}", hex_str!(message.as_slice(), sep:""));
         match self.current_interface {
             Interface::Contactless =>
-                self.contactless.respond(&message).expect("cant respond"),
+                self.contactless.respond(message).expect("cant respond"),
             Interface::Contact =>
-                self.contact.respond(&message).expect("cant respond"),
+                self.contact.respond(message).expect("cant respond"),
         }
     }
 }
