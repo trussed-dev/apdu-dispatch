@@ -26,6 +26,7 @@ pub use iso7816::Interface;
 
 pub enum RequestType {
     Select(Aid),
+    /// Get Response including the Le field of the command
     GetResponse,
     NewCommand,
     None,
@@ -76,6 +77,7 @@ pub struct ApduDispatch {
     current_interface: Interface,
 
     buffer: ApduBuffer,
+    response_len_expected: usize,
     was_request_chained: bool,
 }
 
@@ -103,6 +105,7 @@ impl ApduDispatch
             contactless,
             current_interface: Interface::Contact,
             was_request_chained: false,
+            response_len_expected: 0,
             buffer: ApduBuffer {
                 raw: RawApduBuffer::None,
             },
@@ -233,6 +236,7 @@ impl ApduDispatch
             // Parse the message as an APDU.
             match Self::parse_apdu::<{interchanges::SIZE}>(&message) {
                 Ok(command) => {
+                    self.response_len_expected = command.expected();
                     // The Apdu may be standalone or part of a chain.
                     self.buffer_chained_apdu_if_needed(command, interface)
                 },
@@ -261,7 +265,7 @@ impl ApduDispatch
     }
 
     #[inline(never)]
-    fn handle_reply(&mut self,) {
+    fn handle_reply(&mut self) {
         // Consider if we need to reply via chaining method.
         // If the reader is using chaining, we will simply
         // reply 61XX, and put the response in a buffer.
@@ -279,8 +283,8 @@ impl ApduDispatch
 
                 if self.was_request_chained || res.len() > interchanges::SIZE {
 
-                    // Send 256 bytes max at a time.
-                    let boundary = core::cmp::min(256, res.len());
+                    // Do not send more than the expected bytes
+                    let boundary = core::cmp::min(self.response_len_expected, res.len());
 
                     let to_send = &res[..boundary];
                     let remaining = &res[boundary..];
