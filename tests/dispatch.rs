@@ -511,6 +511,7 @@ fn chained_apdu_1 (){
             &hex!("0010000020
                 /*       1                    8                       16                      24                      32 */
                 /* 1 */  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 
+                00
             "),
             // Expect 0xff + 0xff + 0x20 + 5 == 547 bytes back
             // Echo chunk + remaining
@@ -528,7 +529,7 @@ fn chained_apdu_1 (){
             "),
 
             // Get Response
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             // Echo chunk + remaining
             &hex!("
                 /*       1                    8                       16                      24                      32 */
@@ -544,7 +545,7 @@ fn chained_apdu_1 (){
             "),
 
             // Get Response
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             // Echo chunk + success
             &hex!("
                 /*       1                    8                       16                      24                      32 */
@@ -554,7 +555,7 @@ fn chained_apdu_1 (){
             "),
 
             // Get Response
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             // Error
             &hex!("6F00"),
         ]
@@ -590,6 +591,7 @@ fn multiple_chained_apdu_1 (){
             &hex!(" 0010000020
                 /*       1                    8                       16                      24                      32 */
                 /* 1 */  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
+                00
             "),
             // Expect 0xff + 0xff + 0x20 + 5 == 292 bytes back
             // Data + remaining bytes
@@ -607,7 +609,7 @@ fn multiple_chained_apdu_1 (){
             "),
 
             // Get Response
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             // Echo chunk + success
             &hex!("
                 /*       1                    8                       16                      24                      32 */
@@ -618,11 +620,11 @@ fn multiple_chained_apdu_1 (){
             
             // Check short commands still work
             // Echo 1
-            &hex!("00100000 05 0102030405"),
+            &hex!("00100000 05 0102030405 00"),
             &hex!("0000000000 01020304059000"),
 
             // Echo 2
-            &hex!("00200000 05 0102030405"),
+            &hex!("00200000 05 0102030405 00"),
             &hex!("6d00"),
 
             // Check chaining command still works
@@ -645,6 +647,7 @@ fn multiple_chained_apdu_1 (){
             &hex!("0010000020
                 /*       1                    8                       16                      24                      32 */
                 /* 1 */  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 
+                00
             "),
             // Expect 0xff + 0xff + 0x20 + 5 == 292 bytes back
             // Data + remaining bytes
@@ -662,7 +665,7 @@ fn multiple_chained_apdu_1 (){
             "),
 
             // Get Response
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             // Echo chunk + success
             &hex!("
                 /*       1                    8                       16                      24                      32 */
@@ -735,53 +738,54 @@ fn test_chained_fibonacci_response(){
             &hex!("0030000020
                 /*       1                    8                       16                      24                      32 */
                 /* 1 */  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 
+                00
             "),
             &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
 
             &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
 
             // chaining bit, command to get long fibonacci back
             &hex!("10300000 05 0102030405"),
             &hex!("9000 "),
 
-            &hex!("00300000 05 0102030405"),
+            &hex!("00300000 05 0102030405 00"),
             &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
-            &hex!("00C00000"),
+            &hex!("00C00000 00"),
             &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
         ]
@@ -817,6 +821,7 @@ fn multiple_chained_apdu_interruption (){
             &hex!("0010000020
                 /*       1                    8                       16                      24                      32 */
                 /* 1 */  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 
+                00
             "),
             // Expect 0xff + 0xff + 0x20 + 5 == 292 bytes back
             // Data + remaining bytes
@@ -834,7 +839,7 @@ fn multiple_chained_apdu_interruption (){
             "),
             // Just ignore those 36 bytes and do something different
             // Echo 1
-            &hex!("00100000 05 0102030405"),
+            &hex!("00100000 05 0102030405 00"),
             &hex!("0000000000 0102030405 9000"),
 
             // GetResponse no longer works
@@ -860,6 +865,7 @@ fn multiple_chained_apdu_interruption (){
             &hex!("0010000020
                 /*       1                    8                       16                      24                      32 */
                 /* 1 */  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 
+                00
             "),
             // Expect 0xff + 0xff + 0x20 + 5 == 292 bytes back
             // Data + remaining bytes
