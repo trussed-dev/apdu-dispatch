@@ -94,8 +94,7 @@ impl ApduDispatch
     fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>) -> RequestType {
         info!("instruction: {:?} {}", apdu.instruction(), apdu.p1);
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
-            // RequestType::Select(Aid::try_from_slice(apdu.data()).unwrap())
-            RequestType::Select(Aid::new(apdu.data()))
+            Aid::try_new(&apdu.data()).map_or(RequestType::NewCommand, RequestType::Select)
         } else if apdu.instruction() == Instruction::GetResponse {
             RequestType::GetResponse
         } else {
