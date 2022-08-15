@@ -1093,7 +1093,18 @@ fn response_larger_than_interchange(){
     )
 }
 
-
+#[test]
+#[serial]
+fn selct_bad_aid(){
+    // Sending a select after chaining 0 bytes should result in successful select operation
+    run_apdus(
+        &[
+            // Select 1
+            &hex!("00A40400"),
+            &hex!("6A82"),
+        ]
+    )
+}
 
 #[test]
 #[serial]
