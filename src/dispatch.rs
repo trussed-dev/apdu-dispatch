@@ -288,11 +288,11 @@ impl ApduDispatch
                 )
             }
             RawApduBuffer::Response(res) => {
-
-                if self.was_request_chained || res.len() > MAX_INTERCHANGE_DATA {
+                let max_response_len = self.response_len_expected.min(MAX_INTERCHANGE_DATA);
+                if self.was_request_chained || res.len() > max_response_len {
 
                     // Do not send more than the expected bytes
-                    let boundary = self.response_len_expected.min(res.len()).min(MAX_INTERCHANGE_DATA);
+                    let boundary = max_response_len.min(res.len());
 
                     let to_send = &res[..boundary];
                     let remaining = &res[boundary..];
