@@ -85,7 +85,7 @@ impl ApduDispatch {
     fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>) -> RequestType {
         info!("instruction: {:?} {}", apdu.instruction(), apdu.p1);
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
-            Aid::try_new(&apdu.data()).map_or(RequestType::NewCommand, RequestType::Select)
+            Aid::try_new(apdu.data()).map_or(RequestType::NewCommand, RequestType::Select)
         } else if apdu.instruction() == Instruction::GetResponse {
             RequestType::GetResponse
         } else {
@@ -319,7 +319,7 @@ impl ApduDispatch {
                         .expect("Failed to add the status bytes");
                     (
                         RawApduBuffer::None,
-                        interchanges::Data::from_slice(&res.as_slice()).unwrap(),
+                        interchanges::Data::from_slice(res.as_slice()).unwrap(),
                     )
                 }
             }
@@ -346,9 +346,9 @@ impl ApduDispatch {
     }
 
     #[inline(never)]
-    fn handle_app_select<'a>(
+    fn handle_app_select(
         &mut self,
-        apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>],
+        apps: &mut [&mut dyn App<CommandSize, ResponseSize>],
         aid: Aid,
     ) {
         // three cases:
@@ -391,7 +391,7 @@ impl ApduDispatch {
     }
 
     #[inline(never)]
-    fn handle_app_command<'a>(&mut self, apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>]) {
+    fn handle_app_command(&mut self, apps: &mut [&mut dyn App<CommandSize, ResponseSize>]) {
         // if there is a selected app, send it the command
         let mut response = response::Data::new();
         if let Some(app) = Self::find_app(self.current_aid.as_ref(), apps) {
@@ -409,9 +409,9 @@ impl ApduDispatch {
         };
     }
 
-    pub fn poll<'a>(
+    pub fn poll(
         &mut self,
-        apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>],
+        apps: &mut [&mut dyn App<CommandSize, ResponseSize>],
     ) -> Option<Interface> {
         // Only take on one transaction at a time.
         let request_type = self.check_for_request();

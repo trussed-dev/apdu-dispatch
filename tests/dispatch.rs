@@ -17,7 +17,7 @@ generate_macros!();
 pub struct StdoutFlusher {}
 impl delog::Flusher for StdoutFlusher {
     fn flush(&self, logs: &str) {
-        print!("{}", logs);
+        print!("{logs}");
     }
 }
 
@@ -33,8 +33,8 @@ enum TestInstruction {
 }
 
 fn dump_hex(data: &[u8]) {
-    for i in 0..data.len() {
-        print!("{:02X} ", data[i]);
+    for b in data {
+        print!("{b:02X} ");
     }
     println!();
 }
@@ -50,7 +50,7 @@ impl iso7816::App for TestApp1 {
 // This app echos to Ins code 0x10
 impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for TestApp1 {
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
-        Ok(Default::default())
+        Ok(())
     }
 
     fn deselect(&mut self) {}
@@ -120,7 +120,7 @@ impl iso7816::App for TestApp2 {
 // This app echos to Ins code 0x20
 impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for TestApp2 {
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
-        Ok(Default::default())
+        Ok(())
     }
 
     fn deselect(&mut self) {}
@@ -185,7 +185,7 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
 }
 
 fn run_apdus(apdu_response_pairs: &[&[u8]]) {
-    assert!(apdu_response_pairs.len() > 0);
+    assert!(!apdu_response_pairs.is_empty());
     assert!((apdu_response_pairs.len() & 1) == 0);
 
     Delogger::init_default(delog::LevelFilter::Info, &STDOUT_FLUSHER).ok();
@@ -219,10 +219,10 @@ fn run_apdus(apdu_response_pairs: &[&[u8]]) {
         // let expected_response = Response::Data::from_slice(&raw_res);
 
         print!("<< ");
-        dump_hex(&raw_req);
+        dump_hex(raw_req);
 
         contact_requester
-            .request(&interchanges::Data::from_slice(&raw_req).unwrap())
+            .request(&interchanges::Data::from_slice(raw_req).unwrap())
             .expect("could not deposit command");
 
         apdu_dispatch.poll(&mut [&mut app0, &mut app1, &mut app2, &mut app3, &mut app4]);
@@ -235,7 +235,7 @@ fn run_apdus(apdu_response_pairs: &[&[u8]]) {
 
         if raw_expected_res != response.as_slice() {
             print!("expected: ");
-            dump_hex(&raw_expected_res);
+            dump_hex(raw_expected_res);
             print!("got: ");
             dump_hex(&response);
             panic!("Expected responses do not match");
@@ -788,7 +788,7 @@ fn test_chained_fibonacci_response() {
             chunk.push(0x00).unwrap();
         }
         *start += size;
-        return chunk;
+        chunk
     }
 
     let mut start = 0;
@@ -820,53 +820,53 @@ fn test_chained_fibonacci_response() {
                 /* 1 */  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 
                 00
             "),
-            &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start, 256).as_slice(),
             &hex!("00C00000 00"),
 
-            &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start, 256).as_slice(),
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start, 256).as_slice(),
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start, 256).as_slice(),
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start, 256).as_slice(),
 
             // chaining bit, command to get long fibonacci back
             &hex!("10300000 05 0102030405"),
             &hex!("9000 "),
 
             &hex!("00300000 05 0102030405 00"),
-            &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
             &hex!("00C00000 00"),
-            &apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
+            apdu_res_chunk(&expected, &mut start2, 256).as_slice(),
 
         ]
     )
