@@ -30,4 +30,7 @@ jobs:
       - name: Test
         run: |
           cargo test --features std,log-all
-
+      - name: lint
+        run: |
+          cargo fmt --check
+          cargo clippy --all-features --all-targets -- -Dwarnings
