@@ -17,8 +17,8 @@ pub mod response {
 }
 
 // What apps can expect to send and recieve.
-pub type Command = iso7816::Command<{command::SIZE}>;
-pub type Response = iso7816::Response<{response::SIZE}>;
+pub type Command = iso7816::Command<{ command::SIZE }>;
+pub type Response = iso7816::Response<{ response::SIZE }>;
 
 pub mod app;
 pub use app::App;
