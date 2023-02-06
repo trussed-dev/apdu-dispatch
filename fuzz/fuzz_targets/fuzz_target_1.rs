@@ -64,7 +64,7 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
         _apdu: &apdu_dispatch::Command,
         _reply: &mut apdu_dispatch::response::Data,
     ) -> AppResult {
-        Ok(Default::default())
+        Ok(())
     }
 
     fn deselect(&mut self) {}
@@ -76,11 +76,11 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
         reply: &mut apdu_dispatch::response::Data,
     ) -> AppResult {
         let (ref data, status) = &self.responses[self.count];
-        reply.extend_from_slice(&data).ok();
+        reply.extend_from_slice(data).ok();
         self.count += 1;
-        self.count = self.count % self.responses.len();
+        self.count %= self.responses.len();
         match status {
-            Some(s) => Err(s.clone()),
+            Some(s) => Err(*s),
             None => Ok(()),
         }
     }
