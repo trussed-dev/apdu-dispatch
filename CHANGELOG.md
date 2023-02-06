@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed the calculation of the maximum length of a response when deciding
   whether to send it in one or multiple APDUs. ([#10][])
+- Return an error instead of panicking for invalid aids in `Select` commands ([#8][])
 
 ### Changed
 
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fuzzing infrastructure ([#9][])
 
+[#8]: https://github.com/trussed-dev/apdu-dispatch/pull/8
 [#9]: https://github.com/trussed-dev/apdu-dispatch/pull/9
 [#10]: https://github.com/trussed-dev/apdu-dispatch/pull/10
 [#11]: https://github.com/trussed-dev/apdu-dispatch/pull/11
