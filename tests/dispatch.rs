@@ -1,18 +1,10 @@
-use apdu_dispatch::app::{
-    App,
-    Result as AppResult
-};
-use apdu_dispatch::{
-    response,
-    interchanges,
-};
+use apdu_dispatch::app::{App, Result as AppResult};
 use apdu_dispatch::dispatch;
-use apdu_dispatch::{Command};
-use iso7816::{
-    Status,
-};
-use interchange::Interchange;
+use apdu_dispatch::Command;
+use apdu_dispatch::{interchanges, response};
 use hex_literal::hex;
+use interchange::Interchange;
+use iso7816::Status;
 
 #[macro_use]
 extern crate serial_test;
@@ -40,8 +32,8 @@ enum TestInstruction {
     GetData = 0x12,
 }
 
-fn dump_hex(data: &[u8]){
-    for i in 0 .. data.len() {
+fn dump_hex(data: &[u8]) {
+    for i in 0..data.len() {
         print!("{:02X} ", data[i]);
     }
     println!();
@@ -49,24 +41,26 @@ fn dump_hex(data: &[u8]){
 
 pub struct TestApp1 {}
 
-impl iso7816::App for TestApp1
-{
+impl iso7816::App for TestApp1 {
     fn aid(&self) -> iso7816::Aid {
         iso7816::Aid::new(&hex!("0A01000001"))
     }
 }
 
 // This app echos to Ins code 0x10
-impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for TestApp1 {
-
+impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for TestApp1 {
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         Ok(Default::default())
     }
 
-    fn deselect(&mut self) {
-    }
+    fn deselect(&mut self) {}
 
-    fn call (&mut self, _: dispatch::Interface, apdu: &Command, reply: &mut response::Data) -> AppResult {
+    fn call(
+        &mut self,
+        _: dispatch::Interface,
+        apdu: &Command,
+        reply: &mut response::Data,
+    ) -> AppResult {
         println!("TestApp1::call");
         match apdu.instruction().into() {
             0x10 => {
@@ -82,55 +76,61 @@ impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for 
             // For measuring the stack burden of dispatch
             0x15 => {
                 let buf = heapless::Vec::new();
-                let addr = (&buf as *const response::Data ) as u32;
+                let addr = (&buf as *const response::Data) as u32;
                 reply.extend_from_slice(&addr.to_be_bytes()).unwrap();
                 Ok(())
             }
 
             // Testing a response larger than the interchange's size
             0x21 => {
-                reply.extend_from_slice(&[10; interchanges::SIZE+1]).unwrap();
+                reply
+                    .extend_from_slice(&[10; interchanges::SIZE + 1])
+                    .unwrap();
                 Ok(())
             }
             0x22 => {
-                reply.extend_from_slice(&[10; interchanges::SIZE-2]).unwrap();
+                reply
+                    .extend_from_slice(&[10; interchanges::SIZE - 2])
+                    .unwrap();
                 Ok(())
             }
             0x23 => {
-                reply.extend_from_slice(&[10; interchanges::SIZE-1]).unwrap();
+                reply
+                    .extend_from_slice(&[10; interchanges::SIZE - 1])
+                    .unwrap();
                 Ok(())
             }
             0x24 => {
                 reply.extend_from_slice(&[10; interchanges::SIZE]).unwrap();
                 Ok(())
             }
-            _ => 
-                Err(Status::InstructionNotSupportedOrInvalid)
+            _ => Err(Status::InstructionNotSupportedOrInvalid),
         }
     }
-
 }
 
 pub struct TestApp2 {}
 
-impl iso7816::App for TestApp2
-{
+impl iso7816::App for TestApp2 {
     fn aid(&self) -> iso7816::Aid {
         iso7816::Aid::new(&hex!("0A01000002"))
     }
 }
 
 // This app echos to Ins code 0x20
-impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for TestApp2 {
-
+impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for TestApp2 {
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         Ok(Default::default())
     }
 
-    fn deselect(&mut self) {
-    }
+    fn deselect(&mut self) {}
 
-    fn call (&mut self, _: dispatch::Interface, apdu: &Command, reply: &mut response::Data) -> AppResult {
+    fn call(
+        &mut self,
+        _: dispatch::Interface,
+        apdu: &Command,
+        reply: &mut response::Data,
+    ) -> AppResult {
         println!("TestApp2::call");
         match apdu.instruction().into() {
             0x20 => {
@@ -141,37 +141,31 @@ impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for 
                 reply.push(0).unwrap();
                 reply.extend_from_slice(apdu.data()).unwrap();
                 Ok(())
-            },
+            }
             0x30 => {
                 // Return 2KB bytes of byte-truncated fibonacci
-                reply.extend_from_slice(&[0,1,1]).unwrap();
+                reply.extend_from_slice(&[0, 1, 1]).unwrap();
                 for i in 3..2048 {
-                    let next = ((reply[i-1] as u32 + reply[i - 2] as u32) & 0xff) as u8;
-                    reply.push(
-                        next
-                    ).unwrap();
+                    let next = ((reply[i - 1] as u32 + reply[i - 2] as u32) & 0xff) as u8;
+                    reply.push(next).unwrap();
                 }
                 Ok(())
             }
-            _ =>
-                Err(Status::InstructionNotSupportedOrInvalid)
+            _ => Err(Status::InstructionNotSupportedOrInvalid),
         }
     }
-
 }
 
 pub struct PanicApp {}
 
-impl iso7816::App for PanicApp
-{
+impl iso7816::App for PanicApp {
     fn aid(&self) -> iso7816::Aid {
         iso7816::Aid::new(&hex!("0A01000003"))
     }
 }
 
 // This app echos to Ins code 0x20
-impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for PanicApp {
-
+impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for PanicApp {
     fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
         panic!("Dont call the panic app");
     }
@@ -180,39 +174,42 @@ impl App< {apdu_dispatch::command::SIZE}, {apdu_dispatch::response::SIZE},> for 
         panic!("Dont call the panic app");
     }
 
-    fn call (&mut self, _: dispatch::Interface, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
+    fn call(
+        &mut self,
+        _: dispatch::Interface,
+        _apdu: &Command,
+        _reply: &mut response::Data,
+    ) -> AppResult {
         panic!("Dont call the panic app");
     }
-
 }
 
-fn run_apdus(
-    apdu_response_pairs: &[&[u8]],
-){
+fn run_apdus(apdu_response_pairs: &[&[u8]]) {
     assert!(apdu_response_pairs.len() > 0);
     assert!((apdu_response_pairs.len() & 1) == 0);
 
     Delogger::init_default(delog::LevelFilter::Info, &STDOUT_FLUSHER).ok();
     unsafe { interchanges::Contact::reset_claims() };
     unsafe { interchanges::Contactless::reset_claims() };
-    let (mut contact_requester, contact_responder) = interchanges::Contact::claim()
-        .expect("could not setup ccid ApduInterchange");
+    let (mut contact_requester, contact_responder) =
+        interchanges::Contact::claim().expect("could not setup ccid ApduInterchange");
 
-    let (_contactless_requester, contactless_responder) = interchanges::Contactless::claim()
-        .expect("could not setup iso14443 ApduInterchange");
+    let (_contactless_requester, contactless_responder) =
+        interchanges::Contactless::claim().expect("could not setup iso14443 ApduInterchange");
 
-    let mut apdu_dispatch = apdu_dispatch::dispatch::ApduDispatch::new(contact_responder, contactless_responder);
+    let mut apdu_dispatch =
+        apdu_dispatch::dispatch::ApduDispatch::new(contact_responder, contactless_responder);
     Delogger::flush();
 
-    let mut app0 = PanicApp{};
-    let mut app1 = TestApp1{};
-    let mut app2 = PanicApp{};
-    let mut app3 = TestApp2{};
-    let mut app4 = PanicApp{};
+    let mut app0 = PanicApp {};
+    let mut app1 = TestApp1 {};
+    let mut app2 = PanicApp {};
+    let mut app3 = TestApp2 {};
+    let mut app4 = PanicApp {};
 
     // for i in 0..apdu_response_pairs.len() {
-        // print!("- "); 
-        // dump_hex(apdu_response_pairs[i]);
+    // print!("- ");
+    // dump_hex(apdu_response_pairs[i]);
     // }
     for i in (0..apdu_response_pairs.len()).step_by(2) {
         let raw_req = apdu_response_pairs[i];
@@ -221,25 +218,25 @@ fn run_apdus(
         // let command = Command::try_from(raw_req).unwrap();
         // let expected_response = Response::Data::from_slice(&raw_res);
 
-        print!("<< "); 
+        print!("<< ");
         dump_hex(&raw_req);
 
-        contact_requester.request(&interchanges::Data::from_slice(&raw_req).unwrap())
+        contact_requester
+            .request(&interchanges::Data::from_slice(&raw_req).unwrap())
             .expect("could not deposit command");
 
-        apdu_dispatch.poll(&mut[&mut app0, &mut app1, &mut app2, &mut app3, &mut app4]);
+        apdu_dispatch.poll(&mut [&mut app0, &mut app1, &mut app2, &mut app3, &mut app4]);
         Delogger::flush();
 
         let response = contact_requester.take_response().unwrap();
 
-        print!(">> "); 
+        print!(">> ");
         dump_hex(&response);
 
-        if raw_expected_res != response.as_slice()
-        {
-            print!("expected: "); 
+        if raw_expected_res != response.as_slice() {
+            print!("expected: ");
             dump_hex(&raw_expected_res);
-            print!("got: "); 
+            print!("got: ");
             dump_hex(&response);
             panic!("Expected responses do not match");
         }
@@ -248,207 +245,176 @@ fn run_apdus(
 
 #[test]
 #[serial]
-fn malformed_apdus(){
-    run_apdus(
-        &[
-            // Too short
-            &hex!("00"),
-            &hex!("6F00"),
-            // Too short
-            &hex!("0000"),
-            &hex!("6F00"),
-            // Too short
-            &hex!("000000"),
-            &hex!("6F00"),
-            // Wrong length
-            &hex!("0000000010010101"),
-            &hex!("6F00"),
-            // Extra data
-            &hex!("000000000501010101010101010101010101"),
-            &hex!("6F00"),
-            // Invalid CLA
-            &hex!("FF000000"),
-            &hex!("6F00"),
-            // Invalid extended length
-            &hex!("00000000ff00050101010101"),
-            &hex!("6F00"),
-            // sanity check with Valid APDU with extended length
-            &hex!("000000000000050101010101"),
-            &hex!("6A82"),
-        ]
-    )
-}
-
-
-#[test]
-#[serial]
-fn select_1(){
-    run_apdus(
-        &[
-            // Select
-            &hex!("00A40400 05 0A01000001"),
-            // Ok
-            &hex!("9000"),
-        ]
-    )
+fn malformed_apdus() {
+    run_apdus(&[
+        // Too short
+        &hex!("00"),
+        &hex!("6F00"),
+        // Too short
+        &hex!("0000"),
+        &hex!("6F00"),
+        // Too short
+        &hex!("000000"),
+        &hex!("6F00"),
+        // Wrong length
+        &hex!("0000000010010101"),
+        &hex!("6F00"),
+        // Extra data
+        &hex!("000000000501010101010101010101010101"),
+        &hex!("6F00"),
+        // Invalid CLA
+        &hex!("FF000000"),
+        &hex!("6F00"),
+        // Invalid extended length
+        &hex!("00000000ff00050101010101"),
+        &hex!("6F00"),
+        // sanity check with Valid APDU with extended length
+        &hex!("000000000000050101010101"),
+        &hex!("6A82"),
+    ])
 }
 
 #[test]
 #[serial]
-fn select_2(){
-    run_apdus(
-        &[
-            // Select
-            &hex!("00A40400 05 0A01000002"),
-            // Ok
-            &hex!("9000"),
-        ]
-    )
+fn select_1() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000001"),
+        // Ok
+        &hex!("9000"),
+    ])
 }
 
 #[test]
 #[serial]
-fn select_not_found(){
-    run_apdus(
-        &[
-            // Select
-            &hex!("00A40400 05 0A01000100"),
-            // Not found
-            &hex!("6A82"),
-        ]
-    )
+fn select_2() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000002"),
+        // Ok
+        &hex!("9000"),
+    ])
 }
 
 #[test]
 #[serial]
-fn echo_1(){
-    run_apdus(
-        &[
-            // Select
-            &hex!("00A40400 05 0A01000001"),
-            // Ok
-            &hex!("9000"),
-
-            // Echo
-            &hex!("00100000 05 0102030405 00"),
-            // Echo + Ok
-            &hex!("0000000000 01020304059000"),
-        ]
-    )
+fn select_not_found() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000100"),
+        // Not found
+        &hex!("6A82"),
+    ])
 }
 
 #[test]
 #[serial]
-fn echo_with_cla_bits_set(){
-    run_apdus(
-        &[
-            // Select
-            &hex!("00A40400 05 0A01000001"),
-            // Ok
-            &hex!("9000"),
-
-            // Echo
-            &hex!("80100000 05 0102030405 00"),
-            // Echo + Ok
-            &hex!("0000000000 0102030405 9000"),
-        ]
-    )
+fn echo_1() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000001"),
+        // Ok
+        &hex!("9000"),
+        // Echo
+        &hex!("00100000 05 0102030405 00"),
+        // Echo + Ok
+        &hex!("0000000000 01020304059000"),
+    ])
 }
 
 #[test]
 #[serial]
-fn echo_wrong_instruction(){
-    run_apdus(
-        &[
-            // Select
-            &hex!("00A40400 05 0A01000001"),
-            // Ok
-            &hex!("9000"),
-
-            // Echo
-            &hex!("00200000 05 0102030405 00"),
-            // Wrong Ins
-            &hex!("6d00"),
-        ]
-    )
+fn echo_with_cla_bits_set() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000001"),
+        // Ok
+        &hex!("9000"),
+        // Echo
+        &hex!("80100000 05 0102030405 00"),
+        // Echo + Ok
+        &hex!("0000000000 0102030405 9000"),
+    ])
 }
 
 #[test]
 #[serial]
-fn echo_2(){
-    run_apdus(
-        &[
-            // Select
-            &hex!("00A40400 05 0A01000002"),
-            // Ok
-            &hex!("9000"),
-
-            // Echo
-            &hex!("00200000 05 0102030405 00"),
-            // Echo + Ok
-            &hex!("0000000000 0102030405 9000"),
-        ]
-    )
+fn echo_wrong_instruction() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000001"),
+        // Ok
+        &hex!("9000"),
+        // Echo
+        &hex!("00200000 05 0102030405 00"),
+        // Wrong Ins
+        &hex!("6d00"),
+    ])
 }
 
 #[test]
 #[serial]
-fn echo_wrong_instruction_2(){
-    run_apdus(
-        &[
-            // Select
-            &hex!("00A40400 05 0A01000002"),
-            // Ok
-            &hex!("9000"),
-
-            // Echo
-            &hex!("00100000 05 0102030405 00"),
-            // Wrong Ins
-            &hex!("6d00"),
-        ]
-    )
+fn echo_2() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000002"),
+        // Ok
+        &hex!("9000"),
+        // Echo
+        &hex!("00200000 05 0102030405 00"),
+        // Echo + Ok
+        &hex!("0000000000 0102030405 9000"),
+    ])
 }
 
 #[test]
 #[serial]
-fn unsolicited_instruction(){
-    run_apdus(
-        &[
-            // Echo
-            &hex!("00100000 05 0102030405"),
-            // Not found
-            &hex!("6a82"),
-        ]
-    )
+fn echo_wrong_instruction_2() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000002"),
+        // Ok
+        &hex!("9000"),
+        // Echo
+        &hex!("00100000 05 0102030405 00"),
+        // Wrong Ins
+        &hex!("6d00"),
+    ])
 }
 
 #[test]
 #[serial]
-fn deselect (){
-    run_apdus(
-        &[
-            // Select 1
-            &hex!("00A40400 05 0A01000001"),
-            &hex!("9000"),
-
-            // Echo 1
-            &hex!("00100000 05 0102030405 00"),
-            &hex!("0000000000 0102030405 9000"),
-
-            // Select 2
-            &hex!("00A40400 05 0A01000002"),
-            &hex!("9000"),
-
-            // Echo 1
-            &hex!("00100000 05 0102030405 00"),
-            &hex!("6d00"),
-        ]
-    )
+fn unsolicited_instruction() {
+    run_apdus(&[
+        // Echo
+        &hex!("00100000 05 0102030405"),
+        // Not found
+        &hex!("6a82"),
+    ])
 }
 
 #[test]
 #[serial]
-fn extended_length_echo (){
+fn deselect() {
+    run_apdus(&[
+        // Select 1
+        &hex!("00A40400 05 0A01000001"),
+        &hex!("9000"),
+        // Echo 1
+        &hex!("00100000 05 0102030405 00"),
+        &hex!("0000000000 0102030405 9000"),
+        // Select 2
+        &hex!("00A40400 05 0A01000002"),
+        &hex!("9000"),
+        // Echo 1
+        &hex!("00100000 05 0102030405 00"),
+        &hex!("6d00"),
+    ])
+}
+
+#[test]
+#[serial]
+fn extended_length_echo() {
     run_apdus(
         &[
             // Select 1
@@ -491,7 +457,7 @@ fn extended_length_echo (){
 
 #[test]
 #[serial]
-fn chained_apdu_1 (){
+fn chained_apdu_1() {
     run_apdus(
         &[
             // Select 1
@@ -583,7 +549,7 @@ fn chained_apdu_1 (){
 
 #[test]
 #[serial]
-fn chained_response(){
+fn chained_response() {
     run_apdus(
         &[
             // Select 1
@@ -681,10 +647,9 @@ fn chained_response(){
     )
 }
 
-
 #[test]
 #[serial]
-fn multiple_chained_apdu_1 (){
+fn multiple_chained_apdu_1() {
     run_apdus(
         &[
             // Select 1
@@ -736,7 +701,7 @@ fn multiple_chained_apdu_1 (){
                 /* 2 */  01 01 01 01
                 9000
             "),
-            
+
             // Check short commands still work
             // Echo 1
             &hex!("00100000 05 0102030405 00"),
@@ -798,26 +763,22 @@ fn multiple_chained_apdu_1 (){
 
 #[test]
 #[serial]
-fn test_chained_fibonacci_response(){
-
+fn test_chained_fibonacci_response() {
     let mut expected = response::Data::new();
-    expected.extend_from_slice(&[0,1,1]).unwrap();
+    expected.extend_from_slice(&[0, 1, 1]).unwrap();
     for i in 3..2048 {
-        let next = ((expected[i-1] as u32 + expected[i - 2] as u32) & 0xff) as u8;
-        expected.push(
-            next
-        ).unwrap();
+        let next = ((expected[i - 1] as u32 + expected[i - 2] as u32) & 0xff) as u8;
+        expected.push(next).unwrap();
     }
     // expected_reply.extend_from_slice(&[0x90, 0x00]).unwrap();
     fn apdu_res_chunk(data: &response::Data, start: &mut usize, size: usize) -> response::Data {
-
         let mut chunk = response::Data::new();
         let end = *start + size;
-        chunk.extend_from_slice(&data[*start .. end]).unwrap();
+        chunk.extend_from_slice(&data[*start..end]).unwrap();
         if data[*start..].len() > 256 {
             chunk.push(0x61).unwrap();
 
-            if data[end ..].len() > 255 {
+            if data[end..].len() > 255 {
                 chunk.push(0).unwrap();
             } else {
                 chunk.push(data[end..].len() as u8).unwrap();
@@ -911,10 +872,9 @@ fn test_chained_fibonacci_response(){
     )
 }
 
-
 #[test]
 #[serial]
-fn multiple_chained_apdu_interruption (){
+fn multiple_chained_apdu_interruption() {
     run_apdus(
         &[
             // Select 1
@@ -1007,7 +967,7 @@ fn multiple_chained_apdu_interruption (){
 
 #[test]
 #[serial]
-fn chaining_with_unknown_class_range(){
+fn chaining_with_unknown_class_range() {
     run_apdus(
         &[
             // Select 1
@@ -1033,119 +993,105 @@ fn chaining_with_unknown_class_range(){
 
 #[test]
 #[serial]
-fn send_select_preceded_with_zero_chained_data(){
+fn send_select_preceded_with_zero_chained_data() {
     // Sending a select after chaining 0 bytes should result in successful select operation
-    run_apdus(
-        &[
-            // Chaining zero data
-            &hex!("9060000000"),
-            &hex!("9000"),
-
-            // Select 1
-            &hex!("00A40400 05 0A01000001"),
-            &hex!("9000"),
-        ]
-    )
+    run_apdus(&[
+        // Chaining zero data
+        &hex!("9060000000"),
+        &hex!("9000"),
+        // Select 1
+        &hex!("00A40400 05 0A01000001"),
+        &hex!("9000"),
+    ])
 }
 
 #[test]
 #[serial]
-fn response_larger_than_interchange(){
+fn response_larger_than_interchange() {
     // Sending a select after chaining 0 bytes should result in successful select operation
-    let mut response1 = vec![0x0A; interchanges::SIZE-2];
+    let mut response1 = vec![0x0A; interchanges::SIZE - 2];
     response1.extend_from_slice(&hex!("6103"));
-    let mut response2 = vec![0x0A; interchanges::SIZE-2];
+    let mut response2 = vec![0x0A; interchanges::SIZE - 2];
     response2.extend_from_slice(&hex!("9000"));
-    let mut response3 = vec![0x0A; interchanges::SIZE-2];
+    let mut response3 = vec![0x0A; interchanges::SIZE - 2];
     response3.extend_from_slice(&hex!("6101"));
-    let mut response4 = vec![0x0A; interchanges::SIZE-2];
+    let mut response4 = vec![0x0A; interchanges::SIZE - 2];
     response4.extend_from_slice(&hex!("6102"));
-    run_apdus(
-        &[
-            // Select 1
-            &hex!("00A40400 05 0A01000001"),
-            &hex!("9000"),
-
-            &hex!("00210000  00ffff"),
-            &response1,
-            
-            // Get Response
-            &hex!("00C00000 00"),
-            &hex!("0A0A0A 9000"),
-
-            &hex!("00220000  00ffff"),
-            &response2,
-
-            &hex!("00230000  00ffff"),
-            &response3,
-            
-            // Get Response
-            &hex!("00C00000 00"),
-            &hex!("0A 9000"),
-
-            &hex!("00240000  00ffff"),
-            &response4,
-
-            // Get Response
-            &hex!("00C00000 00"),
-            &hex!("0A0A 9000"),
-        ]
-    )
+    run_apdus(&[
+        // Select 1
+        &hex!("00A40400 05 0A01000001"),
+        &hex!("9000"),
+        &hex!("00210000  00ffff"),
+        &response1,
+        // Get Response
+        &hex!("00C00000 00"),
+        &hex!("0A0A0A 9000"),
+        &hex!("00220000  00ffff"),
+        &response2,
+        &hex!("00230000  00ffff"),
+        &response3,
+        // Get Response
+        &hex!("00C00000 00"),
+        &hex!("0A 9000"),
+        &hex!("00240000  00ffff"),
+        &response4,
+        // Get Response
+        &hex!("00C00000 00"),
+        &hex!("0A0A 9000"),
+    ])
 }
 
 #[test]
 #[serial]
-fn selct_bad_aid(){
+fn selct_bad_aid() {
     // Sending a select after chaining 0 bytes should result in successful select operation
-    run_apdus(
-        &[
-            // Select 1
-            &hex!("00A40400"),
-            &hex!("6A82"),
-        ]
-    )
+    run_apdus(&[
+        // Select 1
+        &hex!("00A40400"),
+        &hex!("6A82"),
+    ])
 }
 
 #[test]
 #[serial]
-fn check_stack_burden(){
-
+fn check_stack_burden() {
     unsafe { interchanges::Contact::reset_claims() };
     unsafe { interchanges::Contactless::reset_claims() };
 
-    let (mut contact_requester, contact_responder) = interchanges::Contact::claim()
-        .expect("could not setup ccid ApduInterchange");
+    let (mut contact_requester, contact_responder) =
+        interchanges::Contact::claim().expect("could not setup ccid ApduInterchange");
 
-    let (_contactless_requester, contactless_responder) = interchanges::Contactless::claim()
-        .expect("could not setup iso14443 ApduInterchange");
+    let (_contactless_requester, contactless_responder) =
+        interchanges::Contactless::claim().expect("could not setup iso14443 ApduInterchange");
 
-    let mut apdu_dispatch = apdu_dispatch::dispatch::ApduDispatch::new(contact_responder, contactless_responder);
+    let mut apdu_dispatch =
+        apdu_dispatch::dispatch::ApduDispatch::new(contact_responder, contactless_responder);
 
-    let mut app1 = TestApp1{};
+    let mut app1 = TestApp1 {};
 
-    contact_requester.request(&interchanges::Data::from_slice(
-        &hex!("00A40400050A01000001"),
-    ).unwrap()).expect("could not deposit command");
+    contact_requester
+        .request(&interchanges::Data::from_slice(&hex!("00A40400050A01000001")).unwrap())
+        .expect("could not deposit command");
 
-    apdu_dispatch.poll(&mut[&mut app1]);
-
-    let response = contact_requester.take_response().unwrap();
-
-    print!(">> "); 
-    dump_hex(&response);
-
-    contact_requester.request(&interchanges::Data::from_slice(
-        &hex!("0015000000")
-    ).unwrap()).expect("could not deposit command");
-
-    apdu_dispatch.poll(&mut[&mut app1]);
+    apdu_dispatch.poll(&mut [&mut app1]);
 
     let response = contact_requester.take_response().unwrap();
 
-    print!(">> "); 
+    print!(">> ");
     dump_hex(&response);
 
-    let payload: [u8; 4] = [response[0], response[1], response[2], response[3], ];
+    contact_requester
+        .request(&interchanges::Data::from_slice(&hex!("0015000000")).unwrap())
+        .expect("could not deposit command");
+
+    apdu_dispatch.poll(&mut [&mut app1]);
+
+    let response = contact_requester.take_response().unwrap();
+
+    print!(">> ");
+    dump_hex(&response);
+
+    let payload: [u8; 4] = [response[0], response[1], response[2], response[3]];
     let min_stack = u32::from_be_bytes(payload);
     let max_stack = (&response as *const interchanges::Data) as u32;
 
@@ -1155,5 +1101,4 @@ fn check_stack_burden(){
 
     // Uncomment to see stack burden printed out
     // assert!(false);
-
 }

@@ -8,19 +8,13 @@
 //!
 //! Apps need to implement the App trait to be managed.
 //!
-use core::convert::TryInto;
-use crate::App;
-use crate::{Command, response, interchanges};
 use crate::command::SIZE as CommandSize;
 use crate::response::SIZE as ResponseSize;
+use crate::App;
+use crate::{interchanges, response, Command};
+use core::convert::TryInto;
 
-use iso7816::{
-    Aid,
-    Instruction,
-    Result,
-    Status,
-    command::FromSliceError,
-};
+use iso7816::{command::FromSliceError, Aid, Instruction, Result, Status};
 
 /// Maximum length of a data field of a response that can fit in an interchange message after
 /// concatenation of SW1SW2
@@ -63,18 +57,16 @@ impl ApduBuffer {
                 if self.raw != RawApduBuffer::None {
                     info!("Was buffering the last response, but aborting that now for this new request.");
                 }
-                let mut new_cmd = iso7816::Command::try_from(&[0,0,0,0]).unwrap();
+                let mut new_cmd = iso7816::Command::try_from(&[0, 0, 0, 0]).unwrap();
                 new_cmd.extend_from_command(command).ok();
                 self.raw = RawApduBuffer::Request(new_cmd);
             }
         }
     }
 
-
     fn response(&mut self, response: &response::Data) {
         self.raw = RawApduBuffer::Response(response.clone());
     }
-
 }
 
 pub struct ApduDispatch {
@@ -89,8 +81,7 @@ pub struct ApduDispatch {
     was_request_chained: bool,
 }
 
-impl ApduDispatch
-{
+impl ApduDispatch {
     fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>) -> RequestType {
         info!("instruction: {:?} {}", apdu.instruction(), apdu.p1);
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
@@ -123,9 +114,8 @@ impl ApduDispatch
     // but that won't work due to ownership rules
     fn find_app<'a, 'b>(
         aid: Option<&Aid>,
-        apps: &'a mut [&'b mut dyn App<CommandSize, ResponseSize>]
+        apps: &'a mut [&'b mut dyn App<CommandSize, ResponseSize>],
     ) -> Option<&'a mut &'b mut dyn App<CommandSize, ResponseSize>> {
-
         // match aid {
         //     Some(aid) => apps.iter_mut().find(|app| aid.starts_with(app.rid())),
         //     None => None,
@@ -136,7 +126,7 @@ impl ApduDispatch
                 // aid.starts_with(app.aid().truncated())
                 debug!("...against {:?}", app.aid());
                 app.aid().matches(aid)
-            } )
+            })
         })
     }
 
@@ -149,15 +139,16 @@ impl ApduDispatch
         contactless_busy || contact_busy
     }
 
-
     #[inline(never)]
-    fn buffer_chained_apdu_if_needed<const S: usize>(&mut self, command: iso7816::Command<S>, interface: Interface) -> RequestType {
-
+    fn buffer_chained_apdu_if_needed<const S: usize>(
+        &mut self,
+        command: iso7816::Command<S>,
+        interface: Interface,
+    ) -> RequestType {
         self.current_interface = interface;
         // iso 7816-4 5.1.1
         // check Apdu level chaining and buffer if necessary.
         if !command.class().chain().not_the_last() {
-
             let is_chaining = matches!(self.buffer.raw, RawApduBuffer::Request(_));
 
             if is_chaining {
@@ -185,11 +176,13 @@ impl ApduDispatch
             match interface {
                 // acknowledge
                 Interface::Contact => {
-                    self.contact.respond(&Status::Success.try_into().unwrap())
+                    self.contact
+                        .respond(&Status::Success.try_into().unwrap())
                         .expect("Could not respond");
                 }
                 Interface::Contactless => {
-                    self.contactless.respond(&Status::Success.try_into().unwrap())
+                    self.contactless
+                        .respond(&Status::Success.try_into().unwrap())
                         .expect("Could not respond");
                 }
             }
@@ -204,33 +197,37 @@ impl ApduDispatch
         }
     }
 
-    fn parse_apdu<const S: usize>(message: &interchanges::Data)
-    -> Result<iso7816::Command<S>> {
-
+    fn parse_apdu<const S: usize>(message: &interchanges::Data) -> Result<iso7816::Command<S>> {
         debug!(">> {}", hex_str!(message.as_slice(), sep:""));
         match iso7816::Command::try_from(message) {
-            Ok(command) => {
-                Ok(command)
-            },
+            Ok(command) => Ok(command),
             Err(_error) => {
                 info!("apdu bad");
                 match _error {
-                    FromSliceError::TooShort => { info!("TooShort"); },
-                    FromSliceError::TooLong => { info!("TooLong"); },
-                    FromSliceError::InvalidClass => { info!("InvalidClass"); },
-                    FromSliceError::InvalidFirstBodyByteForExtended => { info!("InvalidFirstBodyByteForExtended"); },
-                    FromSliceError::InvalidSliceLength => { info!("InvalidSliceLength"); },
+                    FromSliceError::TooShort => {
+                        info!("TooShort");
+                    }
+                    FromSliceError::TooLong => {
+                        info!("TooLong");
+                    }
+                    FromSliceError::InvalidClass => {
+                        info!("InvalidClass");
+                    }
+                    FromSliceError::InvalidFirstBodyByteForExtended => {
+                        info!("InvalidFirstBodyByteForExtended");
+                    }
+                    FromSliceError::InvalidSliceLength => {
+                        info!("InvalidSliceLength");
+                    }
                 }
                 Err(Status::UnspecifiedCheckingError)
             }
         }
-
     }
 
     #[inline(never)]
     fn check_for_request(&mut self) -> RequestType {
         if !self.busy() {
-
             // Check to see if we have gotten a message, giving priority to contactless.
             let (message, interface) = if let Some(message) = self.contactless.take_request() {
                 (message, Interface::Contactless)
@@ -241,32 +238,35 @@ impl ApduDispatch
             };
 
             // Parse the message as an APDU.
-            match Self::parse_apdu::<{interchanges::SIZE}>(&message) {
+            match Self::parse_apdu::<{ interchanges::SIZE }>(&message) {
                 Ok(command) => {
                     self.response_len_expected = command.expected();
                     // The Apdu may be standalone or part of a chain.
                     self.buffer_chained_apdu_if_needed(command, interface)
-                },
+                }
                 Err(response) => {
                     // If not a valid APDU, return error and don't pass to app.
                     info!("Invalid apdu");
                     match interface {
-                        Interface::Contactless =>
-                            self.contactless.respond(&response.into()).expect("cant respond"),
-                        Interface::Contact =>
-                            self.contact.respond(&response.into()).expect("cant respond"),
+                        Interface::Contactless => self
+                            .contactless
+                            .respond(&response.into())
+                            .expect("cant respond"),
+                        Interface::Contact => self
+                            .contact
+                            .respond(&response.into())
+                            .expect("cant respond"),
                     }
                     RequestType::None
                 }
             }
-
         } else {
             RequestType::None
         }
     }
 
     #[inline(never)]
-    fn reply_error (&mut self, status: Status) {
+    fn reply_error(&mut self, status: Status) {
         self.respond(&status.into());
         self.buffer.raw = RawApduBuffer::None;
     }
@@ -281,15 +281,11 @@ impl ApduDispatch
         let (new_state, response) = match &mut self.buffer.raw {
             RawApduBuffer::Request(_) | RawApduBuffer::None => {
                 info!("Unexpected GetResponse request.");
-                (
-                    RawApduBuffer::None,
-                    Status::UnspecifiedCheckingError.into()
-                )
+                (RawApduBuffer::None, Status::UnspecifiedCheckingError.into())
             }
             RawApduBuffer::Response(res) => {
                 let max_response_len = self.response_len_expected.min(MAX_INTERCHANGE_DATA);
                 if self.was_request_chained || res.len() > max_response_len {
-
                     // Do not send more than the expected bytes
                     let boundary = max_response_len.min(res.len());
 
@@ -305,31 +301,31 @@ impl ApduDispatch
                         // Last chunk has success code
                         0x9000
                     };
-                    message.extend_from_slice(&return_code.to_be_bytes()).expect("Failed add to status bytes");
+                    message
+                        .extend_from_slice(&return_code.to_be_bytes())
+                        .expect("Failed add to status bytes");
                     if return_code == 0x9000 {
-                        (
-                            RawApduBuffer::None,
-                            message
-                        )
+                        (RawApduBuffer::None, message)
                     } else {
                         info!("Still {} bytes in response buffer", remaining.len());
                         (
                             RawApduBuffer::Response(response::Data::from_slice(remaining).unwrap()),
-                            message
+                            message,
                         )
                     }
-
                 } else {
                     // Add success code
-                    res.extend_from_slice(&[0x90,00]).expect("Failed to add the status bytes");
-                    (RawApduBuffer::None, interchanges::Data::from_slice(&res.as_slice()).unwrap())
+                    res.extend_from_slice(&[0x90, 00])
+                        .expect("Failed to add the status bytes");
+                    (
+                        RawApduBuffer::None,
+                        interchanges::Data::from_slice(&res.as_slice()).unwrap(),
+                    )
                 }
-
             }
         };
         self.buffer.raw = new_state;
         self.respond(&response);
-
     }
 
     #[inline(never)]
@@ -350,7 +346,11 @@ impl ApduDispatch
     }
 
     #[inline(never)]
-    fn handle_app_select<'a>(&mut self, apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>], aid: Aid) {
+    fn handle_app_select<'a>(
+        &mut self,
+        apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>],
+        aid: Aid,
+    ) {
         // three cases:
         // - currently selected app has different AID -> deselect it, to give it
         //   the chance to clear sensitive state
@@ -376,9 +376,7 @@ impl ApduDispatch
             info!("Selected app");
             let mut response = response::Data::new();
             let result = match &self.buffer.raw {
-                RawApduBuffer::Request(apdu) => {
-                    app.select(apdu, &mut response)
-                }
+                RawApduBuffer::Request(apdu) => app.select(apdu, &mut response),
                 _ => panic!("Unexpected buffer state."),
             };
             if result.is_ok() {
@@ -386,15 +384,11 @@ impl ApduDispatch
             }
 
             self.handle_app_response(&result, &response);
-
-
         } else {
             info!("could not find app by aid: {}", hex_str!(&aid.as_bytes()));
             self.reply_error(Status::NotFound);
         };
-
     }
-
 
     #[inline(never)]
     fn handle_app_command<'a>(&mut self, apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>]) {
@@ -409,7 +403,6 @@ impl ApduDispatch
                 _ => panic!("Unexpected buffer state."),
             };
             self.handle_app_response(&result, &response);
-
         } else {
             // TODO: correct error?
             self.reply_error(Status::NotFound);
@@ -420,7 +413,6 @@ impl ApduDispatch
         &mut self,
         apps: &mut [&'a mut dyn App<CommandSize, ResponseSize>],
     ) -> Option<Interface> {
-
         // Only take on one transaction at a time.
         let request_type = self.check_for_request();
 
@@ -446,8 +438,7 @@ impl ApduDispatch
                 self.handle_app_command(apps);
             }
 
-            RequestType::None => {
-            }
+            RequestType::None => {}
         }
 
         // slight priority to contactless.
@@ -461,13 +452,11 @@ impl ApduDispatch
     }
 
     #[inline(never)]
-    fn respond(&mut self, message: &interchanges::Data){
+    fn respond(&mut self, message: &interchanges::Data) {
         debug!("<< {}", hex_str!(message.as_slice(), sep:""));
         match self.current_interface {
-            Interface::Contactless =>
-                self.contactless.respond(message).expect("cant respond"),
-            Interface::Contact =>
-                self.contact.respond(message).expect("cant respond"),
+            Interface::Contactless => self.contactless.respond(message).expect("cant respond"),
+            Interface::Contact => self.contact.respond(message).expect("cant respond"),
         }
     }
 }

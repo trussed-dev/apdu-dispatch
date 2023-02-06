@@ -15,5 +15,4 @@ pub trait App<const C: usize, const R: usize>: iso7816::App {
     /// Given parsed APDU for app when selected.
     /// Write response data back to buf, and return length of payload.  Return APDU Error code on error.
     fn call(&mut self, interface: Interface, apdu: &Command<C>, reply: &mut Data<R>) -> Result;
-
 }
