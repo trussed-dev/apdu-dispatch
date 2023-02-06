@@ -1,7 +1,7 @@
 [package]
 name = "apdu-dispatch"
-version = "0.1.1"
-authors = ["Conor Patrick <conor@solokeys.com>", "Nicolas Stalder <n@stalder.io>"]
+version = "0.1.2"
+authors = ["Conor Patrick <conor@solokeys.com>", "Nicolas Stalder <n@stalder.io>", "The Trussed developers"]
 edition = "2021"
 license = "Apache-2.0 OR MIT"
 description = "Dispatch layer after nfc-device and usbd-ccid"

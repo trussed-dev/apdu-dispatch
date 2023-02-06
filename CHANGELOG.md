@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0]
+
 ### Fixed
 
 - Fixed the calculation of the maximum length of a response when deciding
@@ -34,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 
-[Unreleased]: https://github.com/trussed-dev/apdu-dispatch/compare/0.1.1...HEAD
+[Unreleased]: https://github.com/trussed-dev/apdu-dispatch/compare/0.1.2...HEAD
+[0.1.2]: https://github.com/trussed-dev/apdu-dispatch/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/trussed-dev/apdu-dispatch/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/trussed-dev/apdu-dispatch/releases/tag/0.1.0
