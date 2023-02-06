@@ -31,6 +31,8 @@ pub enum RequestType {
     /// Get Response including the Le field of the command
     GetResponse,
     NewCommand,
+    /// Incorrect command, which means an error should be returned
+    BadCommand(Status),
     None,
 }
 
@@ -85,7 +87,13 @@ impl ApduDispatch {
     fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>) -> RequestType {
         info!("instruction: {:?} {}", apdu.instruction(), apdu.p1);
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
-            Aid::try_new(apdu.data()).map_or(RequestType::NewCommand, RequestType::Select)
+            Aid::try_new(apdu.data()).map_or_else(
+                |_err| {
+                    warn!("Failed to parse AID: {:?}", _err);
+                    RequestType::BadCommand(Status::IncorrectDataParameter)
+                },
+                RequestType::Select,
+            )
         } else if apdu.instruction() == Instruction::GetResponse {
             RequestType::GetResponse
         } else {
@@ -437,7 +445,10 @@ impl ApduDispatch {
                 info!("Command");
                 self.handle_app_command(apps);
             }
-
+            RequestType::BadCommand(status) => {
+                info!("Bad command");
+                self.reply_error(status);
+            }
             RequestType::None => {}
         }
 

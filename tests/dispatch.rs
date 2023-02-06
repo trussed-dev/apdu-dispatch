@@ -309,6 +309,17 @@ fn select_not_found() {
 
 #[test]
 #[serial]
+fn select_bad_aid() {
+    // Select with an incorrect AID shouldn't crash the application
+    run_apdus(&[
+        // Select 1
+        &hex!("00A40400"),
+        &hex!("6A80"),
+    ])
+}
+
+#[test]
+#[serial]
 fn echo_1() {
     run_apdus(&[
         // Select
@@ -1038,17 +1049,6 @@ fn response_larger_than_interchange() {
         // Get Response
         &hex!("00C00000 00"),
         &hex!("0A0A 9000"),
-    ])
-}
-
-#[test]
-#[serial]
-fn selct_bad_aid() {
-    // Sending a select after chaining 0 bytes should result in successful select operation
-    run_apdus(&[
-        // Select 1
-        &hex!("00A40400"),
-        &hex!("6A82"),
     ])
 }
 
