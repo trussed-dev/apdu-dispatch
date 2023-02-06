@@ -34,3 +34,7 @@ jobs:
         run: |
           cargo fmt --check
           cargo clippy --all-features --all-targets -- -Dwarnings
+          RUSTDOCFLAGS='-Dwarnings' cargo doc --all-features
+          cd fuzz
+          cargo fmt --check
+          cargo clippy --all-features --all-targets -- -Dwarnings
