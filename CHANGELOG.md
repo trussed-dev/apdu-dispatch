@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Migrated to Interchange `0.3.0` ([#13][])
+  - This adds a `'pipe` lifetime to the `ApduDispatch` structure
+  Similar behaviour to before this fix can be emulated using two `const` [`Channels`](https://docs.rs/interchange/latest/interchange/struct.Channel.html)
+  and using a `'static` lifetime
+
 ## [0.1.2]
 
 ### Fixed
