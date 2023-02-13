@@ -3,7 +3,7 @@ use apdu_dispatch::dispatch;
 use apdu_dispatch::Command;
 use apdu_dispatch::{interchanges, response};
 use hex_literal::hex;
-use interchange::Interchange;
+use interchange::Channel;
 use iso7816::Status;
 
 #[macro_use]
@@ -189,13 +189,16 @@ fn run_apdus(apdu_response_pairs: &[&[u8]]) {
     assert!((apdu_response_pairs.len() & 1) == 0);
 
     Delogger::init_default(delog::LevelFilter::Info, &STDOUT_FLUSHER).ok();
-    unsafe { interchanges::Contact::reset_claims() };
-    unsafe { interchanges::Contactless::reset_claims() };
-    let (mut contact_requester, contact_responder) =
-        interchanges::Contact::claim().expect("could not setup ccid ApduInterchange");
 
-    let (_contactless_requester, contactless_responder) =
-        interchanges::Contactless::claim().expect("could not setup iso14443 ApduInterchange");
+    let contact = Channel::new();
+    let (mut contact_requester, contact_responder) = contact
+        .split()
+        .expect("could not setup ccid ApduInterchange");
+
+    let contactless = Channel::new();
+    let (_contactless_requester, contactless_responder) = contactless
+        .split()
+        .expect("could not setup iso14443 ApduInterchange");
 
     let mut apdu_dispatch =
         apdu_dispatch::dispatch::ApduDispatch::new(contact_responder, contactless_responder);
@@ -222,7 +225,7 @@ fn run_apdus(apdu_response_pairs: &[&[u8]]) {
         dump_hex(raw_req);
 
         contact_requester
-            .request(&interchanges::Data::from_slice(raw_req).unwrap())
+            .request(interchanges::Data::from_slice(raw_req).unwrap())
             .expect("could not deposit command");
 
         apdu_dispatch.poll(&mut [&mut app0, &mut app1, &mut app2, &mut app3, &mut app4]);
@@ -1055,14 +1058,15 @@ fn response_larger_than_interchange() {
 #[test]
 #[serial]
 fn check_stack_burden() {
-    unsafe { interchanges::Contact::reset_claims() };
-    unsafe { interchanges::Contactless::reset_claims() };
+    let contact = Channel::new();
+    let (mut contact_requester, contact_responder) = contact
+        .split()
+        .expect("could not setup ccid ApduInterchange");
 
-    let (mut contact_requester, contact_responder) =
-        interchanges::Contact::claim().expect("could not setup ccid ApduInterchange");
-
-    let (_contactless_requester, contactless_responder) =
-        interchanges::Contactless::claim().expect("could not setup iso14443 ApduInterchange");
+    let contactless = Channel::new();
+    let (_contactless_requester, contactless_responder) = contactless
+        .split()
+        .expect("could not setup iso14443 ApduInterchange");
 
     let mut apdu_dispatch =
         apdu_dispatch::dispatch::ApduDispatch::new(contact_responder, contactless_responder);
@@ -1070,7 +1074,7 @@ fn check_stack_burden() {
     let mut app1 = TestApp1 {};
 
     contact_requester
-        .request(&interchanges::Data::from_slice(&hex!("00A40400050A01000001")).unwrap())
+        .request(interchanges::Data::from_slice(&hex!("00A40400050A01000001")).unwrap())
         .expect("could not deposit command");
 
     apdu_dispatch.poll(&mut [&mut app1]);
@@ -1081,7 +1085,7 @@ fn check_stack_burden() {
     dump_hex(&response);
 
     contact_requester
-        .request(&interchanges::Data::from_slice(&hex!("0015000000")).unwrap())
+        .request(interchanges::Data::from_slice(&hex!("0015000000")).unwrap())
         .expect("could not deposit command");
 
     apdu_dispatch.poll(&mut [&mut app1]);

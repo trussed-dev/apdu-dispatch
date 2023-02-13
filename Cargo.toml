@@ -13,7 +13,7 @@ documentation = "https://docs.rs/apdu-dispatch"
 [dependencies]
 delog = "0.1.4"
 heapless = "0.7"
-interchange = "0.2.0"
+interchange = "0.3.0"
 iso7816 = "0.1.1"
 
 [dev-dependencies]

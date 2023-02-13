@@ -11,7 +11,10 @@
 use crate::command::SIZE as CommandSize;
 use crate::response::SIZE as ResponseSize;
 use crate::App;
-use crate::{interchanges, response, Command};
+use crate::{
+    interchanges::{self, Responder},
+    response, Command,
+};
 use core::convert::TryInto;
 
 use iso7816::{command::FromSliceError, Aid, Instruction, Result, Status};
@@ -35,8 +38,6 @@ pub enum RequestType {
     BadCommand(Status),
     None,
 }
-
-use interchange::Responder;
 
 #[derive(PartialEq)]
 enum RawApduBuffer {
@@ -71,11 +72,11 @@ impl ApduBuffer {
     }
 }
 
-pub struct ApduDispatch {
+pub struct ApduDispatch<'pipe> {
     // or currently_selected_aid, or...
     current_aid: Option<Aid>,
-    contact: Responder<interchanges::Contact>,
-    contactless: Responder<interchanges::Contactless>,
+    contact: Responder<'pipe>,
+    contactless: Responder<'pipe>,
     current_interface: Interface,
 
     buffer: ApduBuffer,
@@ -83,7 +84,7 @@ pub struct ApduDispatch {
     was_request_chained: bool,
 }
 
-impl ApduDispatch {
+impl<'pipe> ApduDispatch<'pipe> {
     fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>) -> RequestType {
         info!("instruction: {:?} {}", apdu.instruction(), apdu.p1);
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
@@ -101,10 +102,7 @@ impl ApduDispatch {
         }
     }
 
-    pub fn new(
-        contact: Responder<interchanges::Contact>,
-        contactless: Responder<interchanges::Contactless>,
-    ) -> ApduDispatch {
+    pub fn new(contact: Responder<'pipe>, contactless: Responder<'pipe>) -> Self {
         ApduDispatch {
             current_aid: None,
             contact,
@@ -185,12 +183,12 @@ impl ApduDispatch {
                 // acknowledge
                 Interface::Contact => {
                     self.contact
-                        .respond(&Status::Success.try_into().unwrap())
+                        .respond(Status::Success.try_into().unwrap())
                         .expect("Could not respond");
                 }
                 Interface::Contactless => {
                     self.contactless
-                        .respond(&Status::Success.try_into().unwrap())
+                        .respond(Status::Success.try_into().unwrap())
                         .expect("Could not respond");
                 }
             }
@@ -258,12 +256,11 @@ impl ApduDispatch {
                     match interface {
                         Interface::Contactless => self
                             .contactless
-                            .respond(&response.into())
+                            .respond(response.into())
                             .expect("cant respond"),
-                        Interface::Contact => self
-                            .contact
-                            .respond(&response.into())
-                            .expect("cant respond"),
+                        Interface::Contact => {
+                            self.contact.respond(response.into()).expect("cant respond")
+                        }
                     }
                     RequestType::None
                 }
@@ -275,7 +272,7 @@ impl ApduDispatch {
 
     #[inline(never)]
     fn reply_error(&mut self, status: Status) {
-        self.respond(&status.into());
+        self.respond(status.into());
         self.buffer.raw = RawApduBuffer::None;
     }
 
@@ -333,7 +330,7 @@ impl ApduDispatch {
             }
         };
         self.buffer.raw = new_state;
-        self.respond(&response);
+        self.respond(response);
     }
 
     #[inline(never)]
@@ -463,7 +460,7 @@ impl ApduDispatch {
     }
 
     #[inline(never)]
-    fn respond(&mut self, message: &interchanges::Data) {
+    fn respond(&mut self, message: interchanges::Data) {
         debug!("<< {}", hex_str!(message.as_slice(), sep:""));
         match self.current_interface {
             Interface::Contactless => self.contactless.respond(message).expect("cant respond"),
