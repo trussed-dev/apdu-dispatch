@@ -1,10 +1,4 @@
 pub const SIZE: usize = 3072;
 pub type Data = iso7816::Data<SIZE>;
-
-interchange::interchange! {
-    Contact: (Data, Data)
-}
-
-interchange::interchange! {
-    Contactless: (Data, Data)
-}
+pub type Responder<'pipe> = interchange::Responder<'pipe, Data, Data>;
+pub type Requester<'pipe> = interchange::Responder<'pipe, Data, Data>;

@@ -2,7 +2,7 @@
 use apdu_dispatch::app::Result as AppResult;
 use apdu_dispatch::{dispatch::Interface, interchanges, iso7816, App};
 use arbitrary::{Arbitrary, Unstructured};
-use interchange::Interchange;
+use interchange::Channel;
 use libfuzzer_sys::fuzz_target;
 
 use std::convert::TryFrom;
@@ -87,8 +87,6 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
 }
 
 fuzz_target!(|input: Input| {
-    unsafe { interchanges::Contact::reset_claims() };
-    unsafe { interchanges::Contactless::reset_claims() };
     let mut apps: Vec<_> = input
         .apps
         .into_iter()
@@ -100,11 +98,15 @@ fuzz_target!(|input: Input| {
         .map(|s| (s as &mut dyn apdu_dispatch::App<7609, 7609>))
         .collect();
 
-    let (mut contact_requester, contact_responder) =
-        interchanges::Contact::claim().expect("could not setup ccid ApduInterchange");
+    let contact = Channel::new();
+    let (mut contact_requester, contact_responder) = contact
+        .split()
+        .expect("could not setup ccid ApduInterchange");
 
-    let (mut contactless_requester, contactless_responder) =
-        interchanges::Contactless::claim().expect("could not setup iso14443 ApduInterchange");
+    let contactless = Channel::new();
+    let (mut contactless_requester, contactless_responder) = contactless
+        .split()
+        .expect("could not setup iso14443 ApduInterchange");
 
     let mut apdu_dispatch =
         apdu_dispatch::dispatch::ApduDispatch::new(contact_responder, contactless_responder);
@@ -113,11 +115,11 @@ fuzz_target!(|input: Input| {
         apdu.truncate(interchanges::SIZE);
         if requester {
             contact_requester
-                .request(&interchanges::Data::from_slice(&apdu).unwrap())
+                .request(interchanges::Data::from_slice(&apdu).unwrap())
                 .expect("could not deposit command");
         } else {
             contactless_requester
-                .request(&interchanges::Data::from_slice(&apdu).unwrap())
+                .request(interchanges::Data::from_slice(&apdu).unwrap())
                 .expect("could not deposit command");
         }
         apdu_dispatch.poll(&mut dyn_apps);
