@@ -179,19 +179,7 @@ impl<'pipe> ApduDispatch<'pipe> {
                 apdu_type
             }
         } else {
-            match interface {
-                // acknowledge
-                Interface::Contact => {
-                    self.contact
-                        .respond(Status::Success.try_into().unwrap())
-                        .expect("Could not respond");
-                }
-                Interface::Contactless => {
-                    self.contactless
-                        .respond(Status::Success.try_into().unwrap())
-                        .expect("Could not respond");
-                }
-            }
+            self.respond(Status::Success.try_into().unwrap());
 
             if !command.data().is_empty() {
                 info!("chaining {} bytes", command.data().len());
@@ -462,9 +450,27 @@ impl<'pipe> ApduDispatch<'pipe> {
     #[inline(never)]
     fn respond(&mut self, message: interchanges::Data) {
         debug!("<< {}", hex_str!(message.as_slice(), sep:""));
-        match self.current_interface {
-            Interface::Contactless => self.contactless.respond(message).expect("cant respond"),
-            Interface::Contact => self.contact.respond(message).expect("cant respond"),
+        let (res, responder) = match self.current_interface {
+            Interface::Contactless => (self.contactless.respond(message), &mut self.contactless),
+            Interface::Contact => (self.contact.respond(message), &mut self.contact),
+        };
+        if res.is_ok() {
+            return;
+        }
+
+        let state = responder.state();
+
+        match state {
+            interchange::State::Idle
+            | interchange::State::BuildingRequest
+            | interchange::State::BuildingResponse
+            | interchange::State::Requested
+            | interchange::State::Responded => panic!("Unexpected state: {state:?}"),
+            interchange::State::CancelingRequested
+            | interchange::State::CancelingBuildingResponse
+            | interchange::State::Canceled => {
+                responder.acknowledge_cancel().expect("failed to cancel")
+            }
         }
     }
 }
