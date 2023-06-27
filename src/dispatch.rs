@@ -77,7 +77,7 @@ pub struct ApduDispatch<'pipe> {
     current_aid: Option<Aid>,
     contact: Responder<'pipe>,
     contactless: Responder<'pipe>,
-    current_interface: Interface,
+    interface: Option<Interface>,
 
     buffer: ApduBuffer,
     response_len_expected: usize,
@@ -107,7 +107,7 @@ impl<'pipe> ApduDispatch<'pipe> {
             current_aid: None,
             contact,
             contactless,
-            current_interface: Interface::Contact,
+            interface: None,
             was_request_chained: false,
             response_len_expected: 0,
             buffer: ApduBuffer {
@@ -151,7 +151,6 @@ impl<'pipe> ApduDispatch<'pipe> {
         command: iso7816::Command<S>,
         interface: Interface,
     ) -> RequestType {
-        self.current_interface = interface;
         // iso 7816-4 5.1.1
         // check Apdu level chaining and buffer if necessary.
         if !command.class().chain().not_the_last() {
@@ -243,8 +242,21 @@ impl<'pipe> ApduDispatch<'pipe> {
                 return RequestType::None;
             };
 
+            let apdu;
+
+            if let Some(i) = self.interface {
+                if i != interface {
+                    apdu = Err(Status::UnspecifiedNonpersistentExecutionError)
+                } else {
+                    apdu = Self::parse_apdu::<{ interchanges::SIZE }>(&message);
+                }
+            } else {
+                self.interface = Some(interface);
+                apdu = Self::parse_apdu::<{ interchanges::SIZE }>(&message);
+            }
+
             // Parse the message as an APDU.
-            match Self::parse_apdu::<{ interchanges::SIZE }>(&message) {
+            match apdu {
                 Ok(command) => {
                     self.response_len_expected = command.expected();
                     // The Apdu may be standalone or part of a chain.
@@ -403,7 +415,7 @@ impl<'pipe> ApduDispatch<'pipe> {
             let result = match &self.buffer.raw {
                 RawApduBuffer::Request(apdu) => {
                     // TODO this isn't very clear
-                    app.call(self.current_interface, apdu, &mut response)
+                    app.call(self.interface.unwrap(), apdu, &mut response)
                 }
                 _ => panic!("Unexpected buffer state."),
             };
@@ -462,7 +474,7 @@ impl<'pipe> ApduDispatch<'pipe> {
     #[inline(never)]
     fn respond(&mut self, message: interchanges::Data) {
         debug!("<< {}", hex_str!(message.as_slice(), sep:""));
-        match self.current_interface {
+        match self.interface.unwrap() {
             Interface::Contactless => self.contactless.respond(message).expect("cant respond"),
             Interface::Contact => self.contact.respond(message).expect("cant respond"),
         }
