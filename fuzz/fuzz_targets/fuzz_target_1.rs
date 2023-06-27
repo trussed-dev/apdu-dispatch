@@ -61,6 +61,7 @@ impl iso7816::App for FuzzAppImpl {
 impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for FuzzAppImpl {
     fn select(
         &mut self,
+        _interface: iso7816::Interface,
         _apdu: &apdu_dispatch::Command,
         _reply: &mut apdu_dispatch::response::Data,
     ) -> AppResult {

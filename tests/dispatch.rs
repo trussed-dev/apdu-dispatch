@@ -49,7 +49,12 @@ impl iso7816::App for TestApp1 {
 
 // This app echos to Ins code 0x10
 impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for TestApp1 {
-    fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
+    fn select(
+        &mut self,
+        _interface: dispatch::Interface,
+        _apdu: &Command,
+        _reply: &mut response::Data,
+    ) -> AppResult {
         Ok(())
     }
 
@@ -119,7 +124,12 @@ impl iso7816::App for TestApp2 {
 
 // This app echos to Ins code 0x20
 impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for TestApp2 {
-    fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
+    fn select(
+        &mut self,
+        _interface: dispatch::Interface,
+        _apdu: &Command,
+        _reply: &mut response::Data,
+    ) -> AppResult {
         Ok(())
     }
 
@@ -166,7 +176,12 @@ impl iso7816::App for PanicApp {
 
 // This app echos to Ins code 0x20
 impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for PanicApp {
-    fn select(&mut self, _apdu: &Command, _reply: &mut response::Data) -> AppResult {
+    fn select(
+        &mut self,
+        _interface: dispatch::Interface,
+        _apdu: &Command,
+        _reply: &mut response::Data,
+    ) -> AppResult {
         panic!("Dont call the panic app");
     }
 
