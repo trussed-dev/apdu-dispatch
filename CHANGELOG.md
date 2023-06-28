@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - This adds a `'pipe` lifetime to the `ApduDispatch` structure
   Similar behaviour to before this fix can be emulated using two `const` [`Channels`](https://docs.rs/interchange/latest/interchange/struct.Channel.html)
   and using a `'static` lifetime
+- Reject concurrent use of both contact and contactless interfaces ([#19][])
+
+[#19]: https://github.com/trussed-dev/apdu-dispatch/pull/19
+[#13]: https://github.com/trussed-dev/apdu-dispatch/pull/13
 
 ## [0.1.2]
 
