@@ -32,3 +32,6 @@ log-info = []
 log-trace = []
 log-warn = []
 log-error = []
+
+[patch.crates-io]
+iso7816 = { git = "https://github.com/Nitrokey/iso7816.git", rev = "d9734e40c94c6465f91b7b91163a3358d5a35739" }

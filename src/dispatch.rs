@@ -9,13 +9,13 @@
 //! Apps need to implement the App trait to be managed.
 //!
 use crate::command::SIZE as CommandSize;
+use crate::interchanges::Data;
 use crate::response::SIZE as ResponseSize;
 use crate::App;
 use crate::{
     interchanges::{self, Responder},
     response, Command,
 };
-use core::convert::TryInto;
 
 use iso7816::{command::FromSliceError, Aid, Instruction, Result, Status};
 
@@ -91,7 +91,7 @@ impl<'pipe> ApduDispatch<'pipe> {
             Aid::try_new(apdu.data()).map_or_else(
                 |_err| {
                     warn!("Failed to parse AID: {:?}", _err);
-                    RequestType::BadCommand(Status::IncorrectDataParameter)
+                    RequestType::BadCommand(Status::INCORRECT_PARAMETERS)
                 },
                 RequestType::Select,
             )
@@ -182,12 +182,12 @@ impl<'pipe> ApduDispatch<'pipe> {
                 // acknowledge
                 Interface::Contact => {
                     self.contact
-                        .respond(Status::Success.try_into().unwrap())
+                        .respond(Data::from_slice(&Status::SUCCESS.as_bytes()).unwrap())
                         .expect("Could not respond");
                 }
                 Interface::Contactless => {
                     self.contactless
-                        .respond(Status::Success.try_into().unwrap())
+                        .respond(Data::from_slice(&Status::SUCCESS.as_bytes()).unwrap())
                         .expect("Could not respond");
                 }
             }
@@ -225,7 +225,7 @@ impl<'pipe> ApduDispatch<'pipe> {
                         info!("InvalidSliceLength");
                     }
                 }
-                Err(Status::UnspecifiedCheckingError)
+                Err(Status::ERROR)
             }
         }
     }
@@ -246,7 +246,7 @@ impl<'pipe> ApduDispatch<'pipe> {
 
             if let Some(i) = self.interface {
                 if i != interface {
-                    apdu = Err(Status::UnspecifiedNonpersistentExecutionError)
+                    apdu = Err(Status::EXECUTION_ERROR)
                 } else {
                     apdu = Self::parse_apdu::<{ interchanges::SIZE }>(&message);
                 }
@@ -268,11 +268,12 @@ impl<'pipe> ApduDispatch<'pipe> {
                     match interface {
                         Interface::Contactless => self
                             .contactless
-                            .respond(response.into())
+                            .respond(Data::from_slice(&response.as_bytes()).unwrap())
                             .expect("cant respond"),
-                        Interface::Contact => {
-                            self.contact.respond(response.into()).expect("cant respond")
-                        }
+                        Interface::Contact => self
+                            .contact
+                            .respond(Data::from_slice(&response.as_bytes()).unwrap())
+                            .expect("cant respond"),
                     }
                     RequestType::None
                 }
@@ -284,7 +285,7 @@ impl<'pipe> ApduDispatch<'pipe> {
 
     #[inline(never)]
     fn reply_error(&mut self, status: Status) {
-        self.respond(status.into());
+        self.respond(Data::from_slice(&status.as_bytes()).unwrap());
         self.buffer.raw = RawApduBuffer::None;
     }
 
@@ -298,7 +299,10 @@ impl<'pipe> ApduDispatch<'pipe> {
         let (new_state, response) = match &mut self.buffer.raw {
             RawApduBuffer::Request(_) | RawApduBuffer::None => {
                 info!("Unexpected GetResponse request.");
-                (RawApduBuffer::None, Status::UnspecifiedCheckingError.into())
+                (
+                    RawApduBuffer::None,
+                    Data::from_slice(&Status::ERROR.as_bytes()).unwrap(),
+                )
             }
             RawApduBuffer::Response(res) => {
                 let max_response_len = self.response_len_expected.min(MAX_INTERCHANGE_DATA);
@@ -403,7 +407,7 @@ impl<'pipe> ApduDispatch<'pipe> {
             self.handle_app_response(&result, &response);
         } else {
             info!("could not find app by aid: {}", hex_str!(&aid.as_bytes()));
-            self.reply_error(Status::NotFound);
+            self.reply_error(Status::FILE_OR_APP_NOT_FOUND);
         };
     }
 
@@ -422,7 +426,7 @@ impl<'pipe> ApduDispatch<'pipe> {
             self.handle_app_response(&result, &response);
         } else {
             // TODO: correct error?
-            self.reply_error(Status::NotFound);
+            self.reply_error(Status::FILE_OR_APP_NOT_FOUND);
         };
     }
 
