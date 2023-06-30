@@ -104,7 +104,7 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
                 reply.extend_from_slice(&[10; interchanges::SIZE]).unwrap();
                 Ok(())
             }
-            _ => Err(Status::InstructionNotSupportedOrInvalid),
+            _ => Err(Status::INSTRUCTION_NOT_SUPPORTED_OR_INVALID),
         }
     }
 }
@@ -151,7 +151,7 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
                 }
                 Ok(())
             }
-            _ => Err(Status::InstructionNotSupportedOrInvalid),
+            _ => Err(Status::INSTRUCTION_NOT_SUPPORTED_OR_INVALID),
         }
     }
 }
