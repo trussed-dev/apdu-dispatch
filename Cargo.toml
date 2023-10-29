@@ -1,6 +1,6 @@
 [package]
 name = "apdu-dispatch"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Conor Patrick <conor@solokeys.com>", "Nicolas Stalder <n@stalder.io>", "The Trussed developers"]
 edition = "2021"
 license = "Apache-2.0 OR MIT"
