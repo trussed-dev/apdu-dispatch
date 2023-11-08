@@ -30,10 +30,10 @@ const MAX_INTERCHANGE_DATA: usize = if interchanges::SIZE < ResponseSize {
 pub use iso7816::Interface;
 
 pub enum RequestType {
-    Select(Aid),
+    Select(Aid, Interface),
     /// Get Response including the Le field of the command
     GetResponse,
-    NewCommand,
+    NewCommand(Interface),
     /// Incorrect command, which means an error should be returned
     BadCommand(Status),
     None,
@@ -85,7 +85,7 @@ pub struct ApduDispatch<'pipe> {
 }
 
 impl<'pipe> ApduDispatch<'pipe> {
-    fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>) -> RequestType {
+    fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>, interface: Interface) -> RequestType {
         info!("instruction: {:?} {}", apdu.instruction(), apdu.p1);
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
             Aid::try_new(apdu.data()).map_or_else(
@@ -93,12 +93,12 @@ impl<'pipe> ApduDispatch<'pipe> {
                     warn!("Failed to parse AID: {:?}", _err);
                     RequestType::BadCommand(Status::IncorrectDataParameter)
                 },
-                RequestType::Select,
+                |aid| RequestType::Select(aid, interface),
             )
         } else if apdu.instruction() == Instruction::GetResponse {
             RequestType::GetResponse
         } else {
-            RequestType::NewCommand
+            RequestType::NewCommand(interface)
         }
     }
 
@@ -163,13 +163,13 @@ impl<'pipe> ApduDispatch<'pipe> {
                 self.was_request_chained = true;
                 info!("combined chained commands.");
 
-                RequestType::NewCommand
+                RequestType::NewCommand(interface)
             } else {
                 if self.buffer.raw == RawApduBuffer::None {
                     self.was_request_chained = false;
                 }
-                let apdu_type = Self::apdu_type(&command);
-                match Self::apdu_type(&command) {
+                let apdu_type = Self::apdu_type(&command, interface);
+                match apdu_type {
                     // Keep buffer the same in case of GetResponse
                     RequestType::GetResponse => (),
                     // Overwrite for everything else.
@@ -367,6 +367,7 @@ impl<'pipe> ApduDispatch<'pipe> {
         &mut self,
         apps: &mut [&mut dyn App<CommandSize, ResponseSize>],
         aid: Aid,
+        interface: Interface,
     ) {
         // three cases:
         // - currently selected app has different AID -> deselect it, to give it
@@ -393,10 +394,7 @@ impl<'pipe> ApduDispatch<'pipe> {
             info!("Selected app");
             let mut response = response::Data::new();
             let result = match &self.buffer.raw {
-                RawApduBuffer::Request(apdu) => {
-                    // TODO this isn't very clear
-                    app.select(self.interface.unwrap(), apdu, &mut response)
-                }
+                RawApduBuffer::Request(apdu) => app.select(interface, apdu, &mut response),
                 _ => panic!("Unexpected buffer state."),
             };
             if result.is_ok() {
@@ -411,15 +409,16 @@ impl<'pipe> ApduDispatch<'pipe> {
     }
 
     #[inline(never)]
-    fn handle_app_command(&mut self, apps: &mut [&mut dyn App<CommandSize, ResponseSize>]) {
+    fn handle_app_command(
+        &mut self,
+        apps: &mut [&mut dyn App<CommandSize, ResponseSize>],
+        interface: Interface,
+    ) {
         // if there is a selected app, send it the command
         let mut response = response::Data::new();
         if let Some(app) = Self::find_app(self.current_aid.as_ref(), apps) {
             let result = match &self.buffer.raw {
-                RawApduBuffer::Request(apdu) => {
-                    // TODO this isn't very clear
-                    app.call(self.interface.unwrap(), apdu, &mut response)
-                }
+                RawApduBuffer::Request(apdu) => app.call(interface, apdu, &mut response),
                 _ => panic!("Unexpected buffer state."),
             };
             self.handle_app_response(&result, &response);
@@ -442,9 +441,9 @@ impl<'pipe> ApduDispatch<'pipe> {
         // if there is no new request, poll currently selected app
         match request_type {
             // SELECT case
-            RequestType::Select(aid) => {
+            RequestType::Select(aid, interface) => {
                 info!("Select");
-                self.handle_app_select(apps, aid);
+                self.handle_app_select(apps, aid, interface);
             }
 
             RequestType::GetResponse => {
@@ -453,9 +452,9 @@ impl<'pipe> ApduDispatch<'pipe> {
             }
 
             // command that is not a special command -- goes to app.
-            RequestType::NewCommand => {
+            RequestType::NewCommand(interface) => {
                 info!("Command");
-                self.handle_app_command(apps);
+                self.handle_app_command(apps, interface);
             }
             RequestType::BadCommand(status) => {
                 info!("Bad command");
