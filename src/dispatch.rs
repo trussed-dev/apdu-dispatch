@@ -394,7 +394,8 @@ impl<'pipe> ApduDispatch<'pipe> {
             let mut response = response::Data::new();
             let result = match &self.buffer.raw {
                 RawApduBuffer::Request(apdu) => {
-                    app.select(self.current_interface, apdu, &mut response)
+                    // TODO this isn't very clear
+                    app.select(self.interface.unwrap(), apdu, &mut response)
                 }
                 _ => panic!("Unexpected buffer state."),
             };
