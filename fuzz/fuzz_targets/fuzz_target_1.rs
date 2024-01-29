@@ -5,18 +5,13 @@ use arbitrary::{Arbitrary, Unstructured};
 use interchange::Channel;
 use libfuzzer_sys::fuzz_target;
 
-use std::convert::TryFrom;
-
 #[derive(Debug)]
 struct StatusWrapper(iso7816::Status);
 
 impl<'a> Arbitrary<'a> for StatusWrapper {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<StatusWrapper, arbitrary::Error> {
         let (tag1, tag2) = u.arbitrary()?;
-        Ok(StatusWrapper(
-            iso7816::Status::try_from((tag1, tag2))
-                .map_err(|_| arbitrary::Error::IncorrectFormat)?,
-        ))
+        Ok(StatusWrapper(iso7816::Status::from((tag1, tag2))))
     }
 }
 
