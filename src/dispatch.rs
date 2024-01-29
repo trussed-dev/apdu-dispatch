@@ -397,9 +397,8 @@ impl<'pipe> ApduDispatch<'pipe> {
                 RawApduBuffer::Request(apdu) => app.select(interface, apdu, &mut response),
                 _ => panic!("Unexpected buffer state."),
             };
-            if result.is_ok() {
-                self.current_aid = Some(aid);
-            }
+
+            self.current_aid = Some(aid);
 
             self.handle_app_response(&result, &response);
         } else {
