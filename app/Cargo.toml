@@ -1,0 +1,12 @@
+[package]
+name = "apdu-app"
+version = "0.1.0"
+description = "trait for APDU applications"
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+iso7816.workspace = true

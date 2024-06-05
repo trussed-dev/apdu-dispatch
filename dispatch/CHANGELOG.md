@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Move the `app` module into a separate crate, `apdu-app`, and re-export it.
+
 ## [0.2.0]
 
 ### Changed

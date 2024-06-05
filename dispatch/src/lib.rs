@@ -4,6 +4,8 @@
 extern crate delog;
 generate_macros!();
 
+pub use apdu_app as app;
+pub use app::App;
 pub use iso7816;
 
 pub mod command {
@@ -20,7 +22,5 @@ pub mod response {
 pub type Command = iso7816::Command<{ command::SIZE }>;
 pub type Response = iso7816::Response<{ response::SIZE }>;
 
-pub mod app;
-pub use app::App;
 pub mod dispatch;
 pub mod interchanges;

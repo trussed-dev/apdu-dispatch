@@ -14,7 +14,7 @@ arbitrary = { version = "1", features = ["derive"] }
 interchange = "0.3.0"
 
 [dependencies.apdu-dispatch]
-path = ".."
+path = "../dispatch"
 
 # Prevent this from interfering with workspaces
 [workspace]
@@ -25,3 +25,6 @@ name = "fuzz_target_1"
 path = "fuzz_targets/fuzz_target_1.rs"
 test = false
 doc = false
+
+[patch.crates-io]
+apdu-app.path = "../app"

@@ -1,4 +1,7 @@
+#![no_std]
+
 pub use iso7816::{Command, Data, Interface, Status};
+
 pub type Result = iso7816::Result<()>;
 
 /// An App can receive and respond APDUs at behest of the ApduDispatch.

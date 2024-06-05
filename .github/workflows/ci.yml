@@ -32,9 +32,9 @@ jobs:
           cargo test --features std,log-all
       - name: lint
         run: |
-          cargo fmt --check
-          cargo clippy --all-features --all-targets -- -Dwarnings
-          RUSTDOCFLAGS='-Dwarnings' cargo doc --all-features
+          cargo fmt --check --all
+          cargo clippy --workspace --all-features --all-targets -- -Dwarnings
+          RUSTDOCFLAGS='-Dwarnings' cargo doc --workspace --all-features
           cd fuzz
           cargo fmt --check
           cargo clippy --all-features --all-targets -- -Dwarnings
