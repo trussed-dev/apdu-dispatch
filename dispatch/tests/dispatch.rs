@@ -1,6 +1,5 @@
-use apdu_dispatch::app::{App, Result as AppResult};
+use apdu_dispatch::app::{App, CommandView, Result as AppResult};
 use apdu_dispatch::dispatch;
-use apdu_dispatch::Command;
 use apdu_dispatch::{interchanges, response};
 use hex_literal::hex;
 use interchange::Channel;
@@ -48,11 +47,11 @@ impl iso7816::App for TestApp1 {
 }
 
 // This app echos to Ins code 0x10
-impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for TestApp1 {
+impl App<{ apdu_dispatch::response::SIZE }> for TestApp1 {
     fn select(
         &mut self,
         _interface: dispatch::Interface,
-        _apdu: &Command,
+        _apdu: CommandView<'_>,
         _reply: &mut response::Data,
     ) -> AppResult {
         Ok(())
@@ -63,7 +62,7 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
     fn call(
         &mut self,
         _: dispatch::Interface,
-        apdu: &Command,
+        apdu: CommandView<'_>,
         reply: &mut response::Data,
     ) -> AppResult {
         println!("TestApp1::call");
@@ -123,11 +122,11 @@ impl iso7816::App for TestApp2 {
 }
 
 // This app echos to Ins code 0x20
-impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for TestApp2 {
+impl App<{ apdu_dispatch::response::SIZE }> for TestApp2 {
     fn select(
         &mut self,
         _interface: dispatch::Interface,
-        _apdu: &Command,
+        _apdu: CommandView<'_>,
         _reply: &mut response::Data,
     ) -> AppResult {
         Ok(())
@@ -138,7 +137,7 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
     fn call(
         &mut self,
         _: dispatch::Interface,
-        apdu: &Command,
+        apdu: CommandView<'_>,
         reply: &mut response::Data,
     ) -> AppResult {
         println!("TestApp2::call");
@@ -175,11 +174,11 @@ impl iso7816::App for PanicApp {
 }
 
 // This app echos to Ins code 0x20
-impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for PanicApp {
+impl App<{ apdu_dispatch::response::SIZE }> for PanicApp {
     fn select(
         &mut self,
         _interface: dispatch::Interface,
-        _apdu: &Command,
+        _apdu: CommandView<'_>,
         _reply: &mut response::Data,
     ) -> AppResult {
         panic!("Dont call the panic app");
@@ -192,7 +191,7 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
     fn call(
         &mut self,
         _: dispatch::Interface,
-        _apdu: &Command,
+        _apdu: CommandView<'_>,
         _reply: &mut response::Data,
     ) -> AppResult {
         panic!("Dont call the panic app");

@@ -8,7 +8,6 @@
 //!
 //! Apps need to implement the App trait to be managed.
 //!
-use crate::command::SIZE as CommandSize;
 use crate::response::SIZE as ResponseSize;
 use crate::App;
 use crate::{
@@ -16,7 +15,10 @@ use crate::{
     response, Command,
 };
 
-use iso7816::{command::FromSliceError, Aid, Instruction, Result, Status};
+use iso7816::{
+    command::{CommandView, FromSliceError},
+    Aid, Instruction, Result, Status,
+};
 
 /// Maximum length of a data field of a response that can fit in an interchange message after
 /// concatenation of SW1SW2
@@ -50,17 +52,17 @@ struct ApduBuffer {
 }
 
 impl ApduBuffer {
-    fn request<const S: usize>(&mut self, command: &iso7816::Command<S>) {
+    fn request(&mut self, command: CommandView<'_>) {
         match &mut self.raw {
             RawApduBuffer::Request(buffered) => {
-                buffered.extend_from_command(command).ok();
+                buffered.extend_from_command_view(command).ok();
             }
             _ => {
                 if self.raw != RawApduBuffer::None {
                     info!("Was buffering the last response, but aborting that now for this new request.");
                 }
                 let mut new_cmd = iso7816::Command::try_from(&[0, 0, 0, 0]).unwrap();
-                new_cmd.extend_from_command(command).ok();
+                new_cmd.extend_from_command_view(command).ok();
                 self.raw = RawApduBuffer::Request(new_cmd);
             }
         }
@@ -84,7 +86,7 @@ pub struct ApduDispatch<'pipe> {
 }
 
 impl<'pipe> ApduDispatch<'pipe> {
-    fn apdu_type<const S: usize>(apdu: &iso7816::Command<S>, interface: Interface) -> RequestType {
+    fn apdu_type(apdu: CommandView<'_>, interface: Interface) -> RequestType {
         info!("instruction: {:?} {}", apdu.instruction(), apdu.p1);
         if apdu.instruction() == Instruction::Select && (apdu.p1 & 0x04) != 0 {
             Aid::try_new(apdu.data()).map_or_else(
@@ -119,8 +121,8 @@ impl<'pipe> ApduDispatch<'pipe> {
     // but that won't work due to ownership rules
     fn find_app<'a, 'b>(
         aid: Option<&Aid>,
-        apps: &'a mut [&'b mut dyn App<CommandSize, ResponseSize>],
-    ) -> Option<&'a mut &'b mut dyn App<CommandSize, ResponseSize>> {
+        apps: &'a mut [&'b mut dyn App<ResponseSize>],
+    ) -> Option<&'a mut &'b mut dyn App<ResponseSize>> {
         // match aid {
         //     Some(aid) => apps.iter_mut().find(|app| aid.starts_with(app.rid())),
         //     None => None,
@@ -145,9 +147,9 @@ impl<'pipe> ApduDispatch<'pipe> {
     }
 
     #[inline(never)]
-    fn buffer_chained_apdu_if_needed<const S: usize>(
+    fn buffer_chained_apdu_if_needed(
         &mut self,
-        command: iso7816::Command<S>,
+        command: CommandView<'_>,
         interface: Interface,
     ) -> RequestType {
         // iso 7816-4 5.1.1
@@ -156,7 +158,7 @@ impl<'pipe> ApduDispatch<'pipe> {
             let is_chaining = matches!(self.buffer.raw, RawApduBuffer::Request(_));
 
             if is_chaining {
-                self.buffer.request(&command);
+                self.buffer.request(command);
 
                 // Response now needs to be chained.
                 self.was_request_chained = true;
@@ -167,12 +169,12 @@ impl<'pipe> ApduDispatch<'pipe> {
                 if self.buffer.raw == RawApduBuffer::None {
                     self.was_request_chained = false;
                 }
-                let apdu_type = Self::apdu_type(&command, interface);
+                let apdu_type = Self::apdu_type(command, interface);
                 match apdu_type {
                     // Keep buffer the same in case of GetResponse
                     RequestType::GetResponse => (),
                     // Overwrite for everything else.
-                    _ => self.buffer.request(&command),
+                    _ => self.buffer.request(command),
                 }
                 apdu_type
             }
@@ -193,7 +195,7 @@ impl<'pipe> ApduDispatch<'pipe> {
 
             if !command.data().is_empty() {
                 info!("chaining {} bytes", command.data().len());
-                self.buffer.request(&command);
+                self.buffer.request(command);
             }
 
             // Nothing for the application to consume yet.
@@ -259,7 +261,7 @@ impl<'pipe> ApduDispatch<'pipe> {
                 Ok(command) => {
                     self.response_len_expected = command.expected();
                     // The Apdu may be standalone or part of a chain.
-                    self.buffer_chained_apdu_if_needed(command, interface)
+                    self.buffer_chained_apdu_if_needed(command.as_view(), interface)
                 }
                 Err(response) => {
                     // If not a valid APDU, return error and don't pass to app.
@@ -364,7 +366,7 @@ impl<'pipe> ApduDispatch<'pipe> {
     #[inline(never)]
     fn handle_app_select(
         &mut self,
-        apps: &mut [&mut dyn App<CommandSize, ResponseSize>],
+        apps: &mut [&mut dyn App<ResponseSize>],
         aid: Aid,
         interface: Interface,
     ) {
@@ -393,7 +395,9 @@ impl<'pipe> ApduDispatch<'pipe> {
             info!("Selected app");
             let mut response = response::Data::new();
             let result = match &self.buffer.raw {
-                RawApduBuffer::Request(apdu) => app.select(interface, apdu, &mut response),
+                RawApduBuffer::Request(apdu) => {
+                    app.select(interface, apdu.as_view(), &mut response)
+                }
                 _ => panic!("Unexpected buffer state."),
             };
 
@@ -409,14 +413,14 @@ impl<'pipe> ApduDispatch<'pipe> {
     #[inline(never)]
     fn handle_app_command(
         &mut self,
-        apps: &mut [&mut dyn App<CommandSize, ResponseSize>],
+        apps: &mut [&mut dyn App<ResponseSize>],
         interface: Interface,
     ) {
         // if there is a selected app, send it the command
         let mut response = response::Data::new();
         if let Some(app) = Self::find_app(self.current_aid.as_ref(), apps) {
             let result = match &self.buffer.raw {
-                RawApduBuffer::Request(apdu) => app.call(interface, apdu, &mut response),
+                RawApduBuffer::Request(apdu) => app.call(interface, apdu.as_view(), &mut response),
                 _ => panic!("Unexpected buffer state."),
             };
             self.handle_app_response(&result, &response);
@@ -426,10 +430,7 @@ impl<'pipe> ApduDispatch<'pipe> {
         };
     }
 
-    pub fn poll(
-        &mut self,
-        apps: &mut [&mut dyn App<CommandSize, ResponseSize>],
-    ) -> Option<Interface> {
+    pub fn poll(&mut self, apps: &mut [&mut dyn App<ResponseSize>]) -> Option<Interface> {
         // Only take on one transaction at a time.
         let request_type = self.check_for_request();
 

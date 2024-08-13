@@ -53,11 +53,11 @@ impl iso7816::App for FuzzAppImpl {
     }
 }
 
-impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> for FuzzAppImpl {
+impl App<{ apdu_dispatch::response::SIZE }> for FuzzAppImpl {
     fn select(
         &mut self,
         _interface: iso7816::Interface,
-        _apdu: &apdu_dispatch::Command,
+        _apdu: apdu_dispatch::app::CommandView<'_>,
         _reply: &mut apdu_dispatch::response::Data,
     ) -> AppResult {
         Ok(())
@@ -68,7 +68,7 @@ impl App<{ apdu_dispatch::command::SIZE }, { apdu_dispatch::response::SIZE }> fo
     fn call(
         &mut self,
         _: Interface,
-        _apdu: &apdu_dispatch::Command,
+        _apdu: apdu_dispatch::app::CommandView<'_>,
         reply: &mut apdu_dispatch::response::Data,
     ) -> AppResult {
         let (ref data, status) = &self.responses[self.count];
@@ -91,7 +91,7 @@ fuzz_target!(|input: Input| {
         .collect();
     let mut dyn_apps: Vec<_> = apps
         .iter_mut()
-        .map(|s| (s as &mut dyn apdu_dispatch::App<7609, 7609>))
+        .map(|s| (s as &mut dyn apdu_dispatch::App<7609>))
         .collect();
 
     let contact = Channel::new();
