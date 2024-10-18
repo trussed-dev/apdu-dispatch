@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+-
+
+## [0.3.0]
+
 - Move the `app` module into a separate crate, `apdu-app`, and re-export it.
 - Replace `iso7816::Command` with `iso7816::command::CommandView` in the `App` trait and remove the `C` parameter.
 
