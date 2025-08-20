@@ -10,3 +10,4 @@ repository.workspace = true
 
 [dependencies]
 iso7816.workspace = true
+heapless.workspace = true

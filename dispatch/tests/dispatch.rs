@@ -1,6 +1,7 @@
 use apdu_dispatch::app::{App, CommandView, Result as AppResult};
 use apdu_dispatch::dispatch;
 use apdu_dispatch::{interchanges, response};
+use heapless::VecView;
 use hex_literal::hex;
 use interchange::Channel;
 use iso7816::Status;
@@ -47,12 +48,12 @@ impl iso7816::App for TestApp1 {
 }
 
 // This app echos to Ins code 0x10
-impl App<{ apdu_dispatch::response::SIZE }> for TestApp1 {
+impl App for TestApp1 {
     fn select(
         &mut self,
         _interface: dispatch::Interface,
         _apdu: CommandView<'_>,
-        _reply: &mut response::Data,
+        _reply: &mut VecView<u8>,
     ) -> AppResult {
         Ok(())
     }
@@ -63,7 +64,7 @@ impl App<{ apdu_dispatch::response::SIZE }> for TestApp1 {
         &mut self,
         _: dispatch::Interface,
         apdu: CommandView<'_>,
-        reply: &mut response::Data,
+        reply: &mut VecView<u8>,
     ) -> AppResult {
         println!("TestApp1::call");
         match apdu.instruction().into() {
@@ -79,8 +80,8 @@ impl App<{ apdu_dispatch::response::SIZE }> for TestApp1 {
             }
             // For measuring the stack burden of dispatch
             0x15 => {
-                let buf = heapless::Vec::new();
-                let addr = (&buf as *const response::Data) as u32;
+                let buf = heapless::Vec::<u8, { response::SIZE }>::new();
+                let addr = (&buf as *const VecView<u8>).addr() as u32;
                 reply.extend_from_slice(&addr.to_be_bytes()).unwrap();
                 Ok(())
             }
@@ -122,12 +123,12 @@ impl iso7816::App for TestApp2 {
 }
 
 // This app echos to Ins code 0x20
-impl App<{ apdu_dispatch::response::SIZE }> for TestApp2 {
+impl App for TestApp2 {
     fn select(
         &mut self,
         _interface: dispatch::Interface,
         _apdu: CommandView<'_>,
-        _reply: &mut response::Data,
+        _reply: &mut VecView<u8>,
     ) -> AppResult {
         Ok(())
     }
@@ -138,7 +139,7 @@ impl App<{ apdu_dispatch::response::SIZE }> for TestApp2 {
         &mut self,
         _: dispatch::Interface,
         apdu: CommandView<'_>,
-        reply: &mut response::Data,
+        reply: &mut VecView<u8>,
     ) -> AppResult {
         println!("TestApp2::call");
         match apdu.instruction().into() {
@@ -174,12 +175,12 @@ impl iso7816::App for PanicApp {
 }
 
 // This app echos to Ins code 0x20
-impl App<{ apdu_dispatch::response::SIZE }> for PanicApp {
+impl App for PanicApp {
     fn select(
         &mut self,
         _interface: dispatch::Interface,
         _apdu: CommandView<'_>,
-        _reply: &mut response::Data,
+        _reply: &mut VecView<u8>,
     ) -> AppResult {
         panic!("Dont call the panic app");
     }
@@ -192,7 +193,7 @@ impl App<{ apdu_dispatch::response::SIZE }> for PanicApp {
         &mut self,
         _: dispatch::Interface,
         _apdu: CommandView<'_>,
-        _reply: &mut response::Data,
+        _reply: &mut VecView<u8>,
     ) -> AppResult {
         panic!("Dont call the panic app");
     }

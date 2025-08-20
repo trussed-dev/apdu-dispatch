@@ -9,7 +9,8 @@ license = "Apache-2.0 OR MIT"
 repository = "https://github.com/trussed-dev/apdu-dispatch"
 
 [workspace.dependencies]
-iso7816 = "0.1.2"
+iso7816 = "0.2.0"
+heapless = "0.9"
 
 [patch.crates-io]
 apdu-app.path = "app"

@@ -11,9 +11,9 @@ repository.workspace = true
 [dependencies]
 apdu-app = "0.1.0"
 delog = "0.1.4"
-heapless = "0.7"
 interchange = "0.3.0"
 iso7816.workspace = true
+heapless.workspace = true
 
 [dev-dependencies]
 # Testing

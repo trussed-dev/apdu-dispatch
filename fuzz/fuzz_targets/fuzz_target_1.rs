@@ -2,6 +2,7 @@
 use apdu_dispatch::app::Result as AppResult;
 use apdu_dispatch::{dispatch::Interface, interchanges, iso7816, App};
 use arbitrary::{Arbitrary, Unstructured};
+use heapless::VecView;
 use interchange::Channel;
 use libfuzzer_sys::fuzz_target;
 
@@ -53,12 +54,12 @@ impl iso7816::App for FuzzAppImpl {
     }
 }
 
-impl App<{ apdu_dispatch::response::SIZE }> for FuzzAppImpl {
+impl App for FuzzAppImpl {
     fn select(
         &mut self,
         _interface: iso7816::Interface,
         _apdu: apdu_dispatch::app::CommandView<'_>,
-        _reply: &mut apdu_dispatch::response::Data,
+        _reply: &mut heapless::VecView<u8>,
     ) -> AppResult {
         Ok(())
     }
@@ -69,7 +70,7 @@ impl App<{ apdu_dispatch::response::SIZE }> for FuzzAppImpl {
         &mut self,
         _: Interface,
         _apdu: apdu_dispatch::app::CommandView<'_>,
-        reply: &mut apdu_dispatch::response::Data,
+        reply: &mut VecView<u8>,
     ) -> AppResult {
         let (ref data, status) = &self.responses[self.count];
         reply.extend_from_slice(data).ok();
@@ -89,10 +90,7 @@ fuzz_target!(|input: Input| {
         .enumerate()
         .map(|(idx, app)| FuzzAppImpl::new(idx, app))
         .collect();
-    let mut dyn_apps: Vec<_> = apps
-        .iter_mut()
-        .map(|s| (s as &mut dyn apdu_dispatch::App<7609>))
-        .collect();
+    let mut dyn_apps: Vec<&mut dyn apdu_dispatch::App> = apps.iter_mut().map(|s| s as _).collect();
 
     let contact = Channel::new();
     let (mut contact_requester, contact_responder) = contact

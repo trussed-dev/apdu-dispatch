@@ -12,6 +12,7 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 arbitrary = { version = "1", features = ["derive"] }
 interchange = "0.3.0"
+heapless = "0.9.0"
 
 [dependencies.apdu-dispatch]
 path = "../dispatch"

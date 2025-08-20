@@ -1,11 +1,12 @@
 #![no_std]
 
-pub use iso7816::{command::CommandView, Data, Interface, Status};
+pub use heapless::VecView;
+pub use iso7816::{command::CommandView, Interface};
 
 pub type Result = iso7816::Result<()>;
 
 /// An App can receive and respond APDUs at behest of the ApduDispatch.
-pub trait App<const R: usize>: iso7816::App {
+pub trait App: iso7816::App {
     /// Given parsed APDU for select command.
     /// Write response data back to buf, and return length of payload.  Return APDU Error code on error.
     /// Alternatively, the app can defer the response until later by returning it in `poll()`.
@@ -13,7 +14,7 @@ pub trait App<const R: usize>: iso7816::App {
         &mut self,
         interface: Interface,
         apdu: CommandView<'_>,
-        reply: &mut Data<R>,
+        reply: &mut VecView<u8>,
     ) -> Result;
 
     /// Deselects the app. This is the result of another app getting selected.
@@ -22,5 +23,10 @@ pub trait App<const R: usize>: iso7816::App {
 
     /// Given parsed APDU for app when selected.
     /// Write response data back to buf, and return length of payload.  Return APDU Error code on error.
-    fn call(&mut self, interface: Interface, apdu: CommandView<'_>, reply: &mut Data<R>) -> Result;
+    fn call(
+        &mut self,
+        interface: Interface,
+        apdu: CommandView<'_>,
+        reply: &mut VecView<u8>,
+    ) -> Result;
 }

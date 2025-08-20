@@ -8,7 +8,6 @@
 //!
 //! Apps need to implement the App trait to be managed.
 //!
-use core::mem;
 
 use crate::response::SIZE as ResponseSize;
 use crate::App;
@@ -123,8 +122,8 @@ impl<'pipe> ApduDispatch<'pipe> {
     // but that won't work due to ownership rules
     fn find_app<'a, 'b>(
         aid: Option<&Aid>,
-        apps: &'a mut [&'b mut dyn App<ResponseSize>],
-    ) -> Option<&'a mut &'b mut dyn App<ResponseSize>> {
+        apps: &'a mut [&'b mut dyn App],
+    ) -> Option<&'a mut &'b mut dyn App> {
         // match aid {
         //     Some(aid) => apps.iter_mut().find(|app| aid.starts_with(app.rid())),
         //     None => None,
@@ -366,12 +365,7 @@ impl<'pipe> ApduDispatch<'pipe> {
     }
 
     #[inline(never)]
-    fn handle_app_select(
-        &mut self,
-        apps: &mut [&mut dyn App<ResponseSize>],
-        aid: Aid,
-        interface: Interface,
-    ) {
+    fn handle_app_select(&mut self, apps: &mut [&mut dyn App], aid: Aid, interface: Interface) {
         // three cases:
         // - currently selected app has different AID -> deselect it, to give it
         //   the chance to clear sensitive state
@@ -412,11 +406,7 @@ impl<'pipe> ApduDispatch<'pipe> {
     }
 
     #[inline(never)]
-    fn handle_app_command(
-        &mut self,
-        apps: &mut [&mut dyn App<ResponseSize>],
-        interface: Interface,
-    ) {
+    fn handle_app_command(&mut self, apps: &mut [&mut dyn App], interface: Interface) {
         // if there is a selected app, send it the command
         let mut response = response::Data::new();
         if let Some(app) = Self::find_app(self.current_aid.as_ref(), apps) {
@@ -431,7 +421,7 @@ impl<'pipe> ApduDispatch<'pipe> {
         };
     }
 
-    pub fn poll(&mut self, apps: &mut [&mut dyn App<ResponseSize>]) -> Option<Interface> {
+    pub fn poll(&mut self, apps: &mut [&mut dyn App]) -> Option<Interface> {
         // Only take on one transaction at a time.
         let request_type = self.check_for_request();
 
