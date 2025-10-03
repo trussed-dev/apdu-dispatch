@@ -389,7 +389,7 @@ impl<'pipe> ApduDispatch<'pipe> {
                 _ => panic!("Unexpected buffer state."),
             };
 
-            let old_aid = mem::replace(&mut self.current_aid, Some(aid));
+            let old_aid = self.current_aid.replace(aid);
             if let Some(old_aid) = old_aid {
                 if old_aid != aid {
                     let app = Self::find_app(self.current_aid.as_ref(), apps).unwrap();
