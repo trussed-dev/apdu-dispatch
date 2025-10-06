@@ -26,6 +26,7 @@ jobs:
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
+          components: rustfmt, clippy
           override: true
       - name: Test
         run: |
