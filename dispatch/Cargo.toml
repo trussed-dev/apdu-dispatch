@@ -1,6 +1,6 @@
 [package]
 name = "apdu-dispatch"
-version = "0.3.1"
+version = "0.4.0"
 description = "Dispatch layer after nfc-device and usbd-ccid"
 
 authors.workspace = true
@@ -9,7 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-apdu-app = "0.1.0"
+apdu-app = "0.2.0"
 delog = "0.1.4"
 interchange = "0.3.0"
 iso7816.workspace = true

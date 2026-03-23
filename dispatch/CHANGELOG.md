@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -
 
+## [0.4.0]
+
+- Update dependencies:
+  - `apdu-app` v0.2
+  - `iso7816` v0.2
+  - `hapless` v0.9
+
 ## [0.3.1]
 
 - Do not deselect applications if the application was not found ([#28][])

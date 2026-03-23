@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 -
 
+## [v0.2.0](https://github.com/trussed-dev/apdu-dispatch/releases/tag/app-0.2.0) (2026-03-23)
+
+- Update dependencies:
+  - `iso7816` v0.2
+  - `hapless` v0.9
+
 ## [v0.1.0](https://github.com/trussed-dev/apdu-dispatch/releases/tag/app-0.1.0) (2024-10-18)
 
 - Extract `app` module from `apdu-dispatch` 0.2.0 into a separate crate.
