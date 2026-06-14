@@ -142,7 +142,7 @@ impl<'pipe> ApduDispatch<'pipe> {
         // the correctness of this relies on the properties of interchange - requester can only
         // send request in the idle state.
         use interchange::State::*;
-        let contact_busy = !matches!(self.contact.state(), Idle | Requested);
+        let contact_busy = matches!(self.contact.state(), BuildingResponse);
         let contactless_busy = !matches!(self.contactless.state(), Idle | Requested);
         contactless_busy || contact_busy
     }
@@ -235,6 +235,16 @@ impl<'pipe> ApduDispatch<'pipe> {
     #[inline(never)]
     fn check_for_request(&mut self) -> RequestType {
         if !self.busy() {
+            // Between complete transactions (nothing buffered for an in-progress
+            // chained response), release the interface lock so contact (CCID) and
+            // contactless (NFC) can alternate. Without this, the first interface to
+            // send an APDU monopolizes the dispatch for the whole boot — which
+            // blocks the other interface whenever both are active at once. The lock
+            // is still held *within* a transaction (incl. APDU chaining) for correct
+            // ISO7816 behavior; it is only released here when fully idle.
+            if matches!(self.buffer.raw, RawApduBuffer::None) {
+                self.interface = None;
+            }
             // Check to see if we have gotten a message, giving priority to contactless.
             let (message, interface) = if let Some(message) = self.contactless.take_request() {
                 (message, Interface::Contactless)
