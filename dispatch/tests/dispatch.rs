@@ -372,6 +372,22 @@ fn echo_1() {
 
 #[test]
 #[serial]
+fn echo_without_le() {
+    run_apdus(&[
+        // Select
+        &hex!("00A40400 05 0A01000001"),
+        // Ok
+        &hex!("9000"),
+        // Echo without an Le byte: Yubico ecosystem clients omit it and still
+        // expect up to 256 bytes of response data, like a YubiKey sends
+        &hex!("00100000 05 0102030405"),
+        // Echo + Ok
+        &hex!("0000000000 01020304059000"),
+    ])
+}
+
+#[test]
+#[serial]
 fn echo_with_cla_bits_set() {
     run_apdus(&[
         // Select

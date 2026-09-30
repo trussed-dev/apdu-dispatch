@@ -260,7 +260,16 @@ impl<'pipe> ApduDispatch<'pipe> {
             // Parse the message as an APDU.
             match apdu {
                 Ok(command) => {
-                    self.response_len_expected = command.expected();
+                    // A real YubiKey treats an absent Le byte -- which is what
+                    // ykman, yubico-piv-tool and yubikey.rs send -- as "up to
+                    // 256 bytes", not as "no response data": short replies come
+                    // back whole and longer ones chunk over GET RESPONSE. Those
+                    // clients never issue GET RESPONSE after a plain SELECT, so
+                    // answering 61XX there loses them entirely.
+                    self.response_len_expected = match command.expected() {
+                        0 => 256,
+                        expected => expected,
+                    };
                     // The Apdu may be standalone or part of a chain.
                     self.buffer_chained_apdu_if_needed(command.as_view(), interface)
                 }
