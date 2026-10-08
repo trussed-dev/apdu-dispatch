@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
--
+- Call `App::deselect` for the deselected app, not for the selected app ([#36](https://github.com/trussed-dev/apdu-dispatch/issues/36))
 
 ## [0.4.0]
 

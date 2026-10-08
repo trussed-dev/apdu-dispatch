@@ -188,8 +188,7 @@ fn test_multi() {
 
     let response = dispatch.send_command(Interface::Contact, &select_openpgp_cmd);
     assert_eq!(response.unwrap(), &hex!("9000"));
-    // TODO: this is a bug -- the first application should be deselected, not the second
-    calls[1].deselect += 1;
+    calls[0].deselect += 1;
     calls[1].select += 1;
     assert_eq!(dispatch.calls(), calls);
 

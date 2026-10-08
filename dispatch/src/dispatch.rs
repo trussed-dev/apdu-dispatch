@@ -376,8 +376,6 @@ impl<'pipe> ApduDispatch<'pipe> {
         // For PIV, "SELECT" is NOP if it was already selected, but this is
         // not necessarily the case for other apps
 
-        // if there is a selected app with a different AID, deselect it
-
         // select specified app in any case
         if let Some(app) = Self::find_app(Some(&aid), apps) {
             info!("Selected app");
@@ -389,10 +387,11 @@ impl<'pipe> ApduDispatch<'pipe> {
                 _ => panic!("Unexpected buffer state."),
             };
 
+            // if there is a selected app with a different AID, deselect it
             let old_aid = self.current_aid.replace(aid);
             if let Some(old_aid) = old_aid {
                 if old_aid != aid {
-                    let app = Self::find_app(self.current_aid.as_ref(), apps).unwrap();
+                    let app = Self::find_app(Some(&old_aid), apps).unwrap();
                     // for now all apps will be happy with this.
                     app.deselect();
                 }
