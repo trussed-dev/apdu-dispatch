@@ -121,20 +121,14 @@ impl<'pipe> ApduDispatch<'pipe> {
     // It would be nice to store `current_app` instead of constantly looking up by AID,
     // but that won't work due to ownership rules
     fn find_app<'a, 'b>(
-        aid: Option<&Aid>,
+        aid: &Aid,
         apps: &'a mut [&'b mut dyn App],
     ) -> Option<&'a mut &'b mut dyn App> {
-        // match aid {
-        //     Some(aid) => apps.iter_mut().find(|app| aid.starts_with(app.rid())),
-        //     None => None,
-        // }
-        aid.and_then(move |aid| {
-            debug!("matching {:?}", aid);
-            apps.iter_mut().find(|app| {
-                // aid.starts_with(app.aid().truncated())
-                debug!("...against {:?}", app.aid());
-                app.aid().matches(aid)
-            })
+        debug!("matching {:?}", aid);
+        apps.iter_mut().find(|app| {
+            // aid.starts_with(app.aid().truncated())
+            debug!("...against {:?}", app.aid());
+            app.aid().matches(aid)
         })
     }
 
@@ -377,7 +371,7 @@ impl<'pipe> ApduDispatch<'pipe> {
         // not necessarily the case for other apps
 
         // select specified app in any case
-        if let Some(app) = Self::find_app(Some(&aid), apps) {
+        if let Some(app) = Self::find_app(&aid, apps) {
             info!("Selected app");
             let mut response = response::Data::new();
             let result = match &self.buffer.raw {
@@ -391,7 +385,7 @@ impl<'pipe> ApduDispatch<'pipe> {
             let old_aid = self.current_aid.replace(aid);
             if let Some(old_aid) = old_aid {
                 if old_aid != aid {
-                    let app = Self::find_app(Some(&old_aid), apps).unwrap();
+                    let app = Self::find_app(&old_aid, apps).unwrap();
                     // for now all apps will be happy with this.
                     app.deselect();
                 }
@@ -408,7 +402,11 @@ impl<'pipe> ApduDispatch<'pipe> {
     fn handle_app_command(&mut self, apps: &mut [&mut dyn App], interface: Interface) {
         // if there is a selected app, send it the command
         let mut response = response::Data::new();
-        if let Some(app) = Self::find_app(self.current_aid.as_ref(), apps) {
+        if let Some(app) = self
+            .current_aid
+            .as_ref()
+            .and_then(|aid| Self::find_app(aid, apps))
+        {
             let result = match &self.buffer.raw {
                 RawApduBuffer::Request(apdu) => app.call(interface, apdu.as_view(), &mut response),
                 _ => panic!("Unexpected buffer state."),
