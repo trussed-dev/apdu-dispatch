@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+-
+
+## [0.4.1]
+
 - Call `App::deselect` for the deselected app, not for the selected app ([#36](https://github.com/trussed-dev/apdu-dispatch/issues/36))
 
 ## [0.4.0]
@@ -71,7 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 
-[Unreleased]: https://github.com/trussed-dev/apdu-dispatch/compare/0.3.1...HEAD
+[Unreleased]: https://github.com/trussed-dev/apdu-dispatch/compare/dispatch-0.4.1...HEAD
+[0.4.1]: https://github.com/trussed-dev/apdu-dispatch/compare/dispatch-0.4.0...dispatch-0.4.1
+[0.4.0]: https://github.com/trussed-dev/apdu-dispatch/compare/0.3.1...dispatch-0.4.0
 [0.3.1]: https://github.com/trussed-dev/apdu-dispatch/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/trussed-dev/apdu-dispatch/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/trussed-dev/apdu-dispatch/compare/0.1.2...0.2.0
